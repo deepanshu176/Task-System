@@ -4,13 +4,9 @@ import Link from "next/link";
 import { 
   Zap, 
   ArrowRight, 
-  CheckCircle2, 
   Users, 
-  Shield, 
   BarChart3, 
-  Layers,
-  ArrowUpRight,
-  Globe
+  Layers
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -54,7 +50,7 @@ export default function LandingPage() {
         <div className="max-w-5xl mx-auto text-center">
           <div className="inline-flex items-center gap-3 px-4 py-2 bg-blue-50 border border-blue-100 rounded-full mb-12 animate-fade-in">
             <div className="w-1.5 h-1.5 rounded-full bg-blue-600 shadow-[0_0_8px_rgba(37,99,235,0.5)]" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-blue-600/80">Streamline your team's workflow</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-blue-600/80">Streamline your team&apos;s workflow</span>
           </div>
 
           <h1 className="text-5xl md:text-[5.5rem] font-black tracking-tighter leading-[1.1] mb-10 text-slate-900">
@@ -65,7 +61,7 @@ export default function LandingPage() {
           </h1>
 
           <p className="text-base md:text-lg text-slate-500 font-medium max-w-2xl mx-auto leading-relaxed mb-16 px-4 italic">
-            Lumina is the <span className="text-slate-900 font-bold not-italic">next-generation</span> work operating system designed for high-velocity teams. 
+            Lumina is the <span className="text-slate-900 font-bold not-italic">next-generation</span> work operating system designed for high-velocity teams.
             Organize, track, and scale your intelligence with absolute precision.
           </p>
 
@@ -165,7 +161,7 @@ export default function LandingPage() {
             ))}
           </div>
           <div className="text-[10px] font-black uppercase tracking-widest text-slate-300">
-            © 2026 Lumina Work OS. All rights reserved.
+            &copy; 2026 Lumina Work OS. All rights reserved.
           </div>
         </div>
       </footer>

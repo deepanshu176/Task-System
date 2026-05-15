@@ -1,10 +1,14 @@
 "use client";
-/* eslint-disable @typescript-eslint/no-unused-vars */
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { AxiosError } from 'axios';
 import { useAuthStore } from '@/store/authStore';
 import api from '@/lib/api';
+
+type ApiErrorResponse = {
+  message?: string;
+};
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -35,8 +39,9 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         // Only update if the data is different to avoid unnecessary re-renders
         // though Zustand handles this, it's good to be explicit or just call it once
         setAuth(res.data.data, token);
-      } catch (error: any) {
-        if (error.response?.status === 401) {
+      } catch (error) {
+        const axiosError = error as AxiosError<ApiErrorResponse>;
+        if (axiosError.response?.status === 401) {
           logout();
           router.push('/login');
         }
@@ -68,4 +73,3 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
   return <>{children}</>;
 }
-

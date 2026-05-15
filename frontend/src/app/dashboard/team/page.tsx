@@ -12,7 +12,6 @@ import {
   Trash2, 
   UserPlus, 
   Activity, 
-  Users,
   ShieldCheck
 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
@@ -80,7 +79,7 @@ export default function TeamPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h2 className="text-4xl font-black tracking-tighter text-[var(--foreground)]">Team Management</h2>
-          <p className="text-[var(--foreground)] opacity-40 mt-1 font-medium italic">Manage your organization's team members and roles.</p>
+          <p className="text-[var(--foreground)] opacity-40 mt-1 font-medium italic">Manage your organization&apos;s team members and roles.</p>
         </div>
         <Button 
           onClick={() => { setSelectedUser(null); setMemberModalOpen(true); }} 

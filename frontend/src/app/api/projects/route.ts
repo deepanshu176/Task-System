@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Document, Filter } from 'mongodb';
 import { authenticateRequest } from '@/lib/auth-server';
 import { connectDB } from '@/lib/db';
 import { getCachedData, invalidateCache } from '@/lib/redis';
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest) {
     const cacheKey = `projects:${user._id}`;
     const projects = await getCachedData(cacheKey, async () => {
       const db = await connectDB();
-      const query: any = {};
+      const query: Filter<Document> = {};
 
       // If not admin, only show projects where user is a member or creator
       if (user.role !== 'ADMIN') {

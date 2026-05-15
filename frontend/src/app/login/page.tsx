@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { AxiosError } from "axios";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import toast from "react-hot-toast";
@@ -9,6 +10,10 @@ import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff, Zap, ArrowRight, Globe } from "lucide-react";
+
+type ApiErrorResponse = {
+  message?: string;
+};
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -26,8 +31,9 @@ export default function LoginPage() {
       setAuth(res.data.data.user, res.data.data.token);
       toast.success('Signed in successfully.');
       router.push('/dashboard');
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Authentication failed');
+    } catch (error) {
+      const axiosError = error as AxiosError<ApiErrorResponse>;
+      toast.error(axiosError.response?.data?.message || 'Authentication failed');
     } finally {
       setLoading(false);
     }

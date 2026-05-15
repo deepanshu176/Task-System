@@ -9,8 +9,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: 'Email is required' }, { status: 400 });
     }
 
-    const db = await connectDB();
-    const user = await db.collection('users').findOne({ email });
+    await connectDB();
 
     // For security, always return success even if user not found
     // This prevents email enumeration attacks

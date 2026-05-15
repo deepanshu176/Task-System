@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcrypt';
+import { Document } from 'mongodb';
 import { connectDB } from '@/lib/db';
-import { signupSchema } from '@/lib/validation';
 import { generateToken } from '@/lib/jwt-server';
 
 const BCRYPT_ROUNDS = 10;
@@ -59,17 +59,24 @@ export async function POST(request: NextRequest) {
       { name: 'VIEW_USERS', description: 'View all users' }
     ];
 
-    const permissionDocs: any[] = [];
+    const permissionDocs: Document[] = [];
     for (const perm of defaultPermissions) {
       let permDoc = await db.collection('permissions').findOne({ name: perm.name });
       if (!permDoc) {
+        const createdAt = new Date();
         const result = await db.collection('permissions').insertOne({
           name: perm.name,
           description: perm.description,
-          createdAt: new Date(),
-          updatedAt: new Date()
+          createdAt,
+          updatedAt: createdAt
         });
-        permDoc = await db.collection('permissions').findOne({ _id: result.insertedId });
+        permDoc = {
+          _id: result.insertedId,
+          name: perm.name,
+          description: perm.description,
+          createdAt,
+          updatedAt: createdAt
+        };
       }
       permissionDocs.push(permDoc);
     }
@@ -82,18 +89,26 @@ export async function POST(request: NextRequest) {
         permission: p
       }));
       
+      const createdAt = new Date();
       const result = await db.collection('roles').insertOne({
         name: 'ADMIN',
         description: 'Administrator with full access',
         permissions: rolePermissions,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        createdAt,
+        updatedAt: createdAt
       });
-      adminRoleDoc = await db.collection('roles').findOne({ _id: result.insertedId });
+      adminRoleDoc = {
+        _id: result.insertedId,
+        name: 'ADMIN',
+        description: 'Administrator with full access',
+        permissions: rolePermissions,
+        createdAt,
+        updatedAt: createdAt
+      };
     }
 
     // Get or create MEMBER role if it doesn't exist
-    let memberRoleDoc = await db.collection('roles').findOne({ name: 'MEMBER' });
+    const memberRoleDoc = await db.collection('roles').findOne({ name: 'MEMBER' });
     if (!memberRoleDoc) {
       await db.collection('roles').insertOne({
         name: 'MEMBER',

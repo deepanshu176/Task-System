@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Zap, Send, X, MessageSquare, Bot, User, Sparkles } from "lucide-react";
+import { Zap, Send, X, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function LuminaAssistant() {

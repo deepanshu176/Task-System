@@ -9,17 +9,13 @@ import toast from "react-hot-toast";
 import { 
   Plus, 
   Search, 
-  MoreVertical, 
-  Calendar, 
   Users, 
   Edit2, 
-  Trash2,
-  FolderKanban
+  Trash2
 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
 
 const fetcher = (url: string) => api.get(url).then(res => res.data.data || res.data);
 
@@ -46,7 +42,7 @@ export default function ProjectsPage() {
       await api.delete(`/projects/${id}`);
       mutateProjects();
       toast.success('Project deleted');
-    } catch (error: any) {
+    } catch {
       toast.error('Failed to delete project');
     }
   };

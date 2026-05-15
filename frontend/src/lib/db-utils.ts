@@ -1,5 +1,5 @@
 import { connectDB } from './mongodb';
-import { ObjectId } from 'mongodb';
+import { Document, ObjectId } from 'mongodb';
 
 /**
  * DATABASE QUERY HELPERS
@@ -38,7 +38,7 @@ export const queryHelper = {
   /**
    * Safe create with timestamp integration
    */
-  async create(collection: string, data: any) {
+  async create(collection: string, data: Document) {
     const db = await connectDB();
     const result = await db.collection(collection).insertOne({
       ...data,

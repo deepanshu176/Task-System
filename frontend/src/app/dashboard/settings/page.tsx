@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuthStore } from "@/store/authStore";
-import { User, Shield, Bell, Zap, Mail, Trash2 } from "lucide-react";
+import { User, Shield, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 /**

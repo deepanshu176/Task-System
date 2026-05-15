@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { X, Play, Pause, RotateCcw, Zap, Target, Moon, Sun, Volume2, VolumeX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
@@ -12,23 +12,7 @@ export default function FocusMode({ isOpen, onClose }: { isOpen: boolean, onClos
   const [isMuted, setIsMuted] = useState(true);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    if (isActive && timeLeft > 0) {
-      timerRef.current = setInterval(() => {
-        setTimeLeft(prev => prev - 1);
-      }, 1000);
-    } else if (timeLeft === 0) {
-      handleTimerComplete();
-    } else {
-      if (timerRef.current) clearInterval(timerRef.current);
-    }
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [isActive, timeLeft]);
-
-  const handleTimerComplete = () => {
+  const handleTimerComplete = useCallback(() => {
     setIsActive(false);
     if (timerRef.current) clearInterval(timerRef.current);
     
@@ -46,7 +30,23 @@ export default function FocusMode({ isOpen, onClose }: { isOpen: boolean, onClos
       setMode('FOCUS');
       setTimeLeft(25 * 60);
     }
-  };
+  }, [mode]);
+
+  useEffect(() => {
+    if (isActive && timeLeft > 0) {
+      timerRef.current = setInterval(() => {
+        setTimeLeft(prev => prev - 1);
+      }, 1000);
+    } else if (timeLeft === 0) {
+      handleTimerComplete();
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+    }
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [handleTimerComplete, isActive, timeLeft]);
 
   const toggleTimer = () => setIsActive(!isActive);
   const resetTimer = () => {
@@ -156,7 +156,7 @@ export default function FocusMode({ isOpen, onClose }: { isOpen: boolean, onClos
       {/* Quote/Motivation */}
       <div className="absolute bottom-20 text-center z-10 px-8">
         <p className="text-white/20 text-sm font-bold italic tracking-wide max-w-md mx-auto">
-          "The distance between your goals and reality is called action. Focus on the craft, let Lumina handle the chaos."
+          &quot;The distance between your goals and reality is called action. Focus on the craft, let Lumina handle the chaos.&quot;
         </p>
       </div>
 

@@ -37,7 +37,7 @@ export async function PUT(
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
-    const { _id, projectId, assigneeIds, ...updateData } = await request.json();
+    const { projectId, assigneeIds, ...updateData } = await request.json();
     const db = await connectDB();
 
     const result = await db.collection('tasks').updateOne(
