@@ -1,0 +1,11 @@
+[build]
+builder = "nixpacks"
+buildCommand = "npm install && npm run build"
+
+[start]
+cmd = "npm start"
+
+[[services]]
+type = "web"
+name = "taskflow"
+port = 3000
