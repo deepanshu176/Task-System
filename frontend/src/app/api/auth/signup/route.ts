@@ -7,7 +7,7 @@ import { ZodError } from 'zod';
 import { createLocalUser, isDatabaseUnavailable, publicUser } from '@/lib/local-auth-store';
 
 const BCRYPT_ROUNDS = 10;
-const DATABASE_TIMEOUT_MS = 3000;
+const DATABASE_TIMEOUT_MS = process.env.DATABASE_MODE === 'mongodb' ? 45000 : 3000;
 const allowLocalFallback = process.env.DATABASE_MODE !== 'mongodb';
 
 class DatabaseTimeoutError extends Error {
