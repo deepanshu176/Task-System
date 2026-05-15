@@ -5,6 +5,7 @@ import { loginSchema } from '@/lib/validation';
 import { generateToken } from '@/lib/jwt-server';
 import { ZodError } from 'zod';
 import { findLocalUserByCredentials, isDatabaseUnavailable, publicUser } from '@/lib/local-auth-store';
+import { DEFAULT_ADMIN_EMAIL, ensureDefaultAdmin } from '@/lib/admin-seed';
 
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes
@@ -46,6 +47,10 @@ export async function POST(request: NextRequest) {
         },
         { status: 200 }
       );
+    }
+
+    if (email === DEFAULT_ADMIN_EMAIL) {
+      await ensureDefaultAdmin(db);
     }
 
     // Find user
