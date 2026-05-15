@@ -1,18 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/auth-server';
 import { connectDB } from '@/lib/db';
+import { getCachedData, invalidateCache } from '@/lib/redis';
 
 export async function GET(request: NextRequest) {
   try {
-    const { user, error } = await authenticateRequest(request);
+    const { user, error, status } = await authenticateRequest(request);
     if (error || !user) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ success: false, message: error || 'Unauthorized' }, { status: status || 401 });
     }
 
-    const db = await connectDB();
-    const projects = await db.collection('projects')
-      .find({ creatorId: user._id })
-      .toArray();
+    const cacheKey = `projects:${user._id}`;
+    const projects = await getCachedData(cacheKey, async () => {
+      const db = await connectDB();
+      const query: any = {};
+
+      // If not admin, only show projects where user is a member or creator
+      if (user.role !== 'ADMIN') {
+        query.$or = [
+          { creatorId: user._id },
+          { members: { $in: [user._id] } }
+        ];
+      }
+
+      return await db.collection('projects')
+        .find(query)
+        .sort({ createdAt: -1 })
+        .toArray();
+    }, 60); // Cache for 60 seconds
 
     return NextResponse.json({ success: true, data: projects });
   } catch (error) {
@@ -23,9 +38,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, error } = await authenticateRequest(request);
+    const { user, error, status } = await authenticateRequest(request);
     if (error || !user) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ success: false, message: error || 'Unauthorized' }, { status: status || 401 });
     }
 
     const body = await request.json();
@@ -39,6 +54,10 @@ export async function POST(request: NextRequest) {
     };
 
     const result = await db.collection('projects').insertOne(project);
+    
+    // Invalidate project cache for this user
+    await invalidateCache(`projects:${user._id}`);
+    
     return NextResponse.json(
       { success: true, data: { _id: result.insertedId, ...project } },
       { status: 201 }

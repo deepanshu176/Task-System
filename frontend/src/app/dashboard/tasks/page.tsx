@@ -6,17 +6,18 @@ import useSWR from "swr";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import toast from "react-hot-toast";
-import { Plus, Calendar, Edit2, Trash2 } from "lucide-react";
+import { Plus, Calendar, Edit2, Trash2, Zap, MoreHorizontal, Filter, Clock, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 const fetcher = (url: string) => api.get(url).then(res => res.data.data || res.data);
 
 const columns = [
-  { id: 'TODO', title: 'To Do', color: 'bg-gray-100', dot: 'bg-gray-400' },
-  { id: 'IN_PROGRESS', title: 'In Progress', color: 'bg-blue-50', dot: 'bg-blue-500' },
-  { id: 'COMPLETED', title: 'Done', color: 'bg-green-50', dot: 'bg-green-500' }
+  { id: 'TODO', title: 'To Do', color: 'bg-white/5', dot: 'bg-slate-400' },
+  { id: 'IN_PROGRESS', title: 'In Progress', color: 'bg-lumina-primary/5', dot: 'bg-lumina-primary' },
+  { id: 'COMPLETED', title: 'Done', color: 'bg-emerald-500/5', dot: 'bg-emerald-500' }
 ];
 
 const getTaskAssignees = (task: any) => {
@@ -27,59 +28,26 @@ const getTaskAssignees = (task: any) => {
 
 export default function TasksPage() {
   const user = useAuthStore(state => state.user);
-  
   const [draggedTask, setDraggedTask] = useState<string | null>(null);
   const [isModalOpen, setModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [selectedProjectId, setSelectedProjectId] = useState('all');
 
   const taskUrl = selectedProjectId === 'all' ? '/tasks' : `/tasks?projectId=${selectedProjectId}`;
-  const { data: tasksData, mutate } = useSWR(taskUrl, fetcher, {
-    keepPreviousData: true,
-    revalidateOnFocus: false,
-    dedupingInterval: 30000
-  });
-  const { data: projectsData } = useSWR('/projects', fetcher, {
-    revalidateOnFocus: false,
-    dedupingInterval: 30000
-  });
+  const { data: tasksData, mutate } = useSWR(taskUrl, fetcher);
+  const { data: projectsData } = useSWR('/projects', fetcher);
+  
   const tasks = tasksData || [];
   const projects = Array.isArray(projectsData) ? projectsData : projectsData?.data || [];
 
-  const canCreate = user?.permissions?.includes('CREATE_TASK') || user?.role === 'ADMIN';
-  const canEdit = user?.permissions?.includes('EDIT_TASK') || user?.role === 'ADMIN';
-  const canDelete = user?.permissions?.includes('DELETE_TASK') || user?.role === 'ADMIN';
-
-  const handleDragStart = (e: React.DragEvent, taskId: string) => {
-    setDraggedTask(taskId);
-    e.dataTransfer.effectAllowed = 'move';
-    e.currentTarget.classList.add('opacity-50');
-  };
-
-  const handleDragEnd = (e: React.DragEvent) => {
-    setDraggedTask(null);
-    e.currentTarget.classList.remove('opacity-50');
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-
-  const handleDrop = async (e: React.DragEvent, status: string) => {
-    e.preventDefault();
+  const handleDragStart = (taskId: string) => setDraggedTask(taskId);
+  const handleDrop = async (status: string) => {
     if (!draggedTask) return;
-
-    const task = tasks.find((t: any) => t.id === draggedTask);
+    const task = tasks.find((t: any) => t._id === draggedTask);
     if (task?.status === status) return;
 
-    if (!canEdit) {
-      toast.error('You do not have permission to edit tasks');
-      return;
-    }
-
     const prevTasks = [...tasks];
-    mutate(tasks.map((t: any) => t.id === draggedTask ? { ...t, status } : t), false);
+    mutate(tasks.map((t: any) => t._id === draggedTask ? { ...t, status } : t), false);
 
     try {
       await api.put(`/tasks/${draggedTask}`, { status });
@@ -104,203 +72,123 @@ export default function TasksPage() {
   };
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex justify-between items-center mb-8">
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900">Task Board</h2>
-          <p className="text-gray-500 mt-1">Manage your team&apos;s tasks and workflows.</p>
+          <h2 className="text-4xl font-black tracking-tight text-slate-900">Tasks</h2>
+          <p className="text-slate-500 mt-1 font-medium italic">High-velocity Kanban board for team operations.</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex items-center gap-4">
           <select
             value={selectedProjectId}
             onChange={(e) => setSelectedProjectId(e.target.value)}
-            className="h-10 min-w-52 rounded-md border border-gray-200 bg-white px-3 text-sm font-medium text-gray-900 outline-none focus:ring-2 focus:ring-blue-500"
+            className="h-11 min-w-[200px] px-4 rounded-xl border border-slate-100 bg-white text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600/10 transition-all"
           >
             <option value="all">All Projects</option>
-            {projects.map((project: any) => (
-              <option key={project.id} value={project.id}>{project.name}</option>
-            ))}
+            {projects.map((p: any) => <option key={p._id} value={p._id}>{p.name}</option>)}
           </select>
-          {canCreate && (
-            <Button
-              onClick={() => {
-                setSelectedTask(selectedProjectId === 'all' ? null : { projectId: selectedProjectId });
-                setModalOpen(true);
-              }}
-              className="bg-blue-600 hover:bg-blue-700 shadow-md"
-            >
-              <Plus className="w-4 h-4 mr-2" /> New Task
+          {user?.role === 'ADMIN' && (
+            <Button onClick={() => { setSelectedTask(null); setModalOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white font-black h-11 px-6 rounded-xl shadow-lg shadow-blue-600/20 flex items-center gap-2 transition-all">
+              <Plus className="w-5 h-5" /> New Task
             </Button>
           )}
         </div>
       </div>
 
-      <div className="flex gap-6 overflow-x-auto pb-4 flex-1 items-start">
+      <div className="flex gap-6 overflow-x-auto pb-10 flex-1 items-start no-scrollbar">
         {columns.map(column => (
-          <div 
-            key={column.id} 
-            className={`${column.color} rounded-2xl w-80 flex-shrink-0 flex flex-col border border-gray-200/50 max-h-full`}
-            onDragOver={handleDragOver}
-            onDrop={(e) => handleDrop(e, column.id)}
+          <div
+            key={column.id}
+            className={cn("w-[340px] flex-shrink-0 flex flex-col rounded-[2.5rem] bg-slate-50 border border-slate-100 shadow-sm max-h-full transition-all")}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={() => handleDrop(column.id)}
           >
-            <div className="p-4 flex items-center justify-between border-b border-gray-200/50">
-              <div className="flex items-center gap-2">
-                <div className={`w-2.5 h-2.5 rounded-full ${column.dot}`}></div>
-                <h3 className="font-semibold text-gray-800">{column.title}</h3>
-                <span className="bg-white/60 text-gray-500 text-xs font-bold px-2 py-0.5 rounded-full ml-2">
-                  {tasks.filter((t: any) => t.status === column.id).length}
-                </span>
+            <div className="p-6 flex items-center justify-between border-b border-slate-100/50">
+              <div className="flex items-center gap-3">
+                <div className={cn("w-2 h-2 rounded-full", column.dot)}></div>
+                <h3 className="font-black text-[10px] uppercase tracking-widest text-slate-400">{column.title}</h3>
+                <span className="text-[10px] font-black text-blue-600 px-2 py-0.5 bg-blue-50 border border-blue-100 rounded-full">{tasks.filter((t: any) => t.status === column.id).length}</span>
               </div>
-              {canCreate && (
-                <button
-                  onClick={() => {
-                    setSelectedTask({
-                      status: column.id,
-                      projectId: selectedProjectId === 'all' ? '' : selectedProjectId
-                    });
-                    setModalOpen(true);
-                  }}
-                  className="text-gray-400 hover:text-gray-700 p-1 rounded-md hover:bg-white/50 transition"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              )}
             </div>
 
-            <div className="flex-1 p-3 space-y-3 overflow-y-auto">
+            <div className="flex-1 p-4 space-y-4 overflow-y-auto min-h-[500px]">
               {tasks.filter((t: any) => t.status === column.id).map((task: any) => (
                 <div
                   key={task._id}
-                  draggable={canEdit}
-                  onDragStart={(e) => handleDragStart(e, task._id)}}
-                  onDragEnd={handleDragEnd}
-                  className={`bg-white p-4 rounded-xl shadow-sm border border-gray-200 transition-all group ${canEdit ? 'cursor-grab active:cursor-grabbing hover:border-blue-300 hover:shadow-md' : ''}`}
+                  draggable
+                  onDragStart={() => handleDragStart(task._id)}
+                  className="bg-white p-6 group border border-slate-100 rounded-2xl shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md hover:border-blue-600/10 transition-all"
                 >
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex gap-2 mb-2">
-                      <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                        task.priority === 'HIGH' ? 'bg-red-50 text-red-600 border border-red-100' :
-                        task.priority === 'MEDIUM' ? 'bg-orange-50 text-orange-600 border border-orange-100' :
-                        'bg-blue-50 text-blue-600 border border-blue-100'
-                      }`}>
-                        {task.priority}
-                      </span>
-                    </div>
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                      {canEdit && (
-                        <button onClick={() => { setSelectedTask(task); setModalOpen(true); }} className="p-1 hover:bg-blue-50 text-gray-400 hover:text-blue-600 rounded">
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                      {canDelete && (
-                        <button onClick={() => handleDelete(task._id)} className="p-1 hover:bg-red-50 text-gray-400 hover:text-red-600 rounded">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
+                  <div className="flex justify-between items-start mb-4">
+                    <span className={cn(
+                      "text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg border",
+                      task.priority === 'HIGH' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                      task.priority === 'MEDIUM' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                      'bg-blue-50 text-blue-600 border-blue-100'
+                    )}>
+                      {task.priority}
+                    </span>
+                    {user?.role === 'ADMIN' && (
+                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                        <button onClick={() => { setSelectedTask(task); setModalOpen(true); }} className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-400 hover:text-blue-600 transition-colors"><Edit2 className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => handleDelete(task._id)} className="p-1.5 hover:bg-rose-50 rounded-lg text-slate-400 hover:text-rose-500 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+                      </div>
+                    )}
                   </div>
 
-                  <h4 className="font-medium text-gray-900 leading-tight mb-2">{task.title}</h4>
-                  {task.project?.name && (
-                    <p className="text-[11px] font-semibold text-blue-600 mb-2 truncate">{task.project.name}</p>
-                  )}
-                  
-                  {task.description && (
-                    <p className="text-xs text-gray-500 line-clamp-2 mb-4 leading-relaxed">{task.description}</p>
-                  )}
+                  <h4 className="font-bold text-base mb-2 text-slate-900 leading-tight">{task.title}</h4>
+                  <p className="text-xs text-slate-500 line-clamp-2 mb-6 italic font-medium leading-relaxed">{task.description}</p>
 
-                  <div className="flex items-center justify-between mt-4">
-                    <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
-                      <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                      {task.dueDate ? new Date(task.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'No date'}
+                  <div className="flex items-center justify-between pt-5 border-t border-slate-50">
+                    <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-slate-300">
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span>{task.dueDate ? new Date(task.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'No date'}</span>
                     </div>
-
                     <div className="flex -space-x-2">
-                      {getTaskAssignees(task).slice(0, 3).map((assignee: any) => (
-                        <div key={assignee.id} className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold ring-2 ring-white shadow-sm" title={assignee.name}>
-                          {assignee.name?.charAt(0).toUpperCase()}
-                        </div>
-                      ))}
-                      {getTaskAssignees(task).length > 3 && (
-                        <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 text-[10px] font-bold ring-2 ring-white shadow-sm">
-                          +{getTaskAssignees(task).length - 3}
-                        </div>
-                      )}
+                       {getTaskAssignees(task).slice(0, 3).map((assignee: any) => (
+                         <div key={assignee._id} className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-[10px] font-black text-white ring-4 ring-white shadow-sm">
+                           {assignee.name?.charAt(0).toUpperCase()}
+                         </div>
+                       ))}
                     </div>
                   </div>
                 </div>
               ))}
-              {tasks.filter((t: any) => t.status === column.id).length === 0 && (
-                <div className="rounded-xl border border-dashed border-gray-200 bg-white/50 p-4 text-center text-sm text-gray-400">
-                  No tasks
-                </div>
-              )}
             </div>
           </div>
         ))}
       </div>
 
-      <CreateEditTaskModal 
-        isOpen={isModalOpen}
-        onClose={() => setModalOpen(false)}
-        task={selectedTask}
-        projects={projects}
-        onSuccess={() => mutate()}
-      />
+      <CreateEditTaskModal isOpen={isModalOpen} onClose={() => setModalOpen(false)} task={selectedTask} projects={projects} onSuccess={() => mutate()} />
     </div>
   );
 }
 
 function CreateEditTaskModal({ isOpen, onClose, task, projects, onSuccess }: { isOpen: boolean, onClose: () => void, task: any, projects: any[], onSuccess: () => void }) {
   const [loading, setLoading] = useState(false);
-  const { data: users } = useSWR(isOpen ? '/users?limit=100' : null, fetcher, {
-    revalidateOnFocus: false,
-    dedupingInterval: 30000
-  });
-
-  const [formData, setFormData] = useState({
-    title: task?.title || '',
-    description: task?.description || '',
-    status: task?.status || 'TODO',
-    priority: task?.priority || 'MEDIUM',
-    projectId: task?.projectId || '',
-    assigneeIds: task?.assignees?.map((assignee: any) => assignee.userId) || (task?.assigneeId ? [task.assigneeId] : [])
-  });
+  const { data: usersData } = useSWR(isOpen ? '/users?limit=100' : null, fetcher);
+  const users = Array.isArray(usersData) ? usersData : usersData?.data || [];
+  const [formData, setFormData] = useState({ title: '', description: '', status: 'TODO', priority: 'MEDIUM', projectId: '', assigneeIds: [] as string[] });
 
   useEffect(() => {
-    if (!isOpen) return;
-
-    setFormData({
-      title: task?.title || '',
-      description: task?.description || '',
-      status: task?.status || 'TODO',
-      priority: task?.priority || 'MEDIUM',
-      projectId: task?.projectId || '',
-      assigneeIds: task?.assignees?.map((assignee: any) => assignee.userId) || (task?.assigneeId ? [task.assigneeId] : [])
-    });
+    if (isOpen) {
+      setFormData({
+        title: task?.title || '',
+        description: task?.description || '',
+        status: task?.status || 'TODO',
+        priority: task?.priority || 'MEDIUM',
+        projectId: task?.projectId || '',
+        assigneeIds: task?.assignees?.map((a: any) => a.userId) || []
+      });
+    }
   }, [isOpen, task]);
 
-  const toggleAssignee = (userId: string) => {
-    const isSelected = formData.assigneeIds.includes(userId);
-    setFormData({
-      ...formData,
-      assigneeIds: isSelected
-        ? formData.assigneeIds.filter((id: string) => id !== userId)
-        : [...formData.assigneeIds, userId]
-    });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
     setLoading(true);
     try {
-      if (task?.id) {
-        await api.put(`/tasks/${task._id}`, formData);
-        toast.success('Task updated');
-      } else {
-        await api.post('/tasks', formData);
-        toast.success('Task created');
-      }
+      if (task?._id) await api.put(`/tasks/${task._id}`, formData);
+      else await api.post('/tasks', formData);
       onSuccess();
       onClose();
     } catch (error: any) {
@@ -310,97 +198,87 @@ function CreateEditTaskModal({ isOpen, onClose, task, projects, onSuccess }: { i
     }
   };
 
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title={task?.id ? 'Edit Task' : 'Create Task'}>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">Task Title</label>
-          <Input 
-            value={formData.title}
-            onChange={(e) => setFormData({...formData, title: e.target.value})}
-            placeholder="What needs to be done?"
-            required
-          />
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium mb-1">Description</label>
-          <textarea 
-            value={formData.description}
-            onChange={(e) => setFormData({...formData, description: e.target.value})}
-            className="w-full border border-gray-300 rounded-md p-2 outline-none focus:ring-2 focus:ring-blue-600 min-h-[80px]"
-          />
-        </div>
+  const toggleAssignee = (userId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      assigneeIds: prev.assigneeIds.includes(userId) ? prev.assigneeIds.filter(id => id !== userId) : [...prev.assigneeIds, userId]
+    }));
+  };
 
-        <div className="grid grid-cols-2 gap-4">
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={task?._id ? 'Edit Task' : 'New Task'}>
+      <form onSubmit={handleSubmit} className="space-y-8">
+        <div>
+          <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2.5 ml-1">Title</label>
+          <Input 
+            value={formData.title} 
+            onChange={(e) => setFormData({...formData, title: e.target.value})} 
+            placeholder="Task title..." 
+            required 
+            className="h-14 bg-slate-50 border-slate-100 rounded-2xl focus:border-blue-600 focus:ring-0 transition-all font-medium"
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2.5 ml-1">Description</label>
+          <textarea 
+            value={formData.description} 
+            onChange={(e) => setFormData({...formData, description: e.target.value})} 
+            className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-5 outline-none text-sm min-h-[120px] focus:border-blue-600 transition-all font-medium placeholder:text-slate-300" 
+            placeholder="What needs to be done?" 
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium mb-1">Status</label>
-            <select 
-              value={formData.status}
-              onChange={(e) => setFormData({...formData, status: e.target.value})}
-              className="w-full border border-gray-300 rounded-md p-2 outline-none"
-            >
+            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2.5 ml-1">Status</label>
+            <select value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})} className="w-full bg-slate-50 border border-slate-100 rounded-2xl h-14 px-5 text-sm font-bold text-slate-900 outline-none focus:border-blue-600 transition-all appearance-none">
               <option value="TODO">To Do</option>
               <option value="IN_PROGRESS">In Progress</option>
               <option value="COMPLETED">Done</option>
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Priority</label>
-            <select 
-              value={formData.priority}
-              onChange={(e) => setFormData({...formData, priority: e.target.value})}
-              className="w-full border border-gray-300 rounded-md p-2 outline-none"
-            >
+            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2.5 ml-1">Priority</label>
+            <select value={formData.priority} onChange={(e) => setFormData({...formData, priority: e.target.value})} className="w-full bg-slate-50 border border-slate-100 rounded-2xl h-14 px-5 text-sm font-bold text-slate-900 outline-none focus:border-blue-600 transition-all appearance-none">
               <option value="LOW">Low</option>
               <option value="MEDIUM">Medium</option>
               <option value="HIGH">High</option>
             </select>
           </div>
         </div>
-
         <div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Project</label>
-            <select 
-              value={formData.projectId}
-              onChange={(e) => setFormData({...formData, projectId: e.target.value})}
-              className="w-full border border-gray-300 rounded-md p-2 outline-none"
-              required
-            >
-              <option value="">Select Project</option>
-              {projects.map((p: any) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
+          <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2.5 ml-1">Project</label>
+          <select value={formData.projectId} onChange={(e) => setFormData({...formData, projectId: e.target.value})} className="w-full bg-slate-50 border border-slate-100 rounded-2xl h-14 px-5 text-sm font-bold text-slate-900 outline-none focus:border-blue-600 transition-all appearance-none" required>
+            <option value="">Select Project</option>
+            {projects.map((p: any) => <option key={p._id} value={p._id}>{p.name}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2.5 ml-1">Assign Team</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto p-4 border border-slate-100 rounded-[2rem] bg-slate-50 no-scrollbar">
+            {users.map((u: any) => (
+              <label key={u._id} className={cn(
+                "flex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer group border",
+                formData.assigneeIds.includes(u._id) ? "bg-white border-blue-600/20 shadow-sm" : "bg-transparent border-transparent hover:bg-white"
+              )}>
+                <div className="relative">
+                  <input type="checkbox" checked={formData.assigneeIds.includes(u._id)} onChange={() => toggleAssignee(u._id)} className="peer absolute opacity-0" />
+                  <div className="w-5 h-5 rounded-lg border-2 border-slate-200 flex items-center justify-center transition-all peer-checked:bg-blue-600 peer-checked:border-blue-600 group-hover:border-blue-600/30">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-white opacity-0 peer-checked:opacity-100" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-[8px] font-black text-white">
+                    {u.name?.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="text-xs font-black text-slate-700">{u.name}</span>
+                </div>
+              </label>
+            ))}
           </div>
         </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Assignees</label>
-          <div className="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto rounded-md border border-gray-200 bg-gray-50/50 p-2">
-            {(users?.data || []).length === 0 ? (
-              <p className="col-span-2 px-1 py-2 text-sm text-gray-500">No users available.</p>
-            ) : (users?.data || []).map((u: any) => {
-              const isSelected = formData.assigneeIds.includes(u.id);
-              return (
-                <label key={u.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-white">
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => toggleAssignee(u.id)}
-                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="truncate">{u.name}</span>
-                </label>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-2 pt-4">
-          <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-          <Button type="submit" disabled={loading}>{loading ? 'Saving...' : 'Save Task'}</Button>
+        <div className="flex justify-end gap-4 pt-8 border-t border-slate-100">
+          <button type="button" onClick={onClose} className="px-8 py-3.5 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-all">Cancel</button>
+          <button type="submit" disabled={loading} className="px-10 py-3.5 bg-slate-900 text-white text-xs font-black uppercase tracking-widest rounded-2xl shadow-[0_20px_40px_rgba(15,23,42,0.1)] hover:bg-slate-800 transition-all">{loading ? 'Saving...' : 'Save Task'}</button>
         </div>
       </form>
     </Modal>

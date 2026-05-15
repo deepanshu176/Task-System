@@ -1,78 +1,113 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import Link from "next/link";
 import useSWR from "swr";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
-import { CheckCircle2, Clock, FolderKanban, TrendingUp, Users } from "lucide-react";
+import { CheckCircle2, Clock, FolderKanban, TrendingUp, Users, Activity } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const fetcher = (url: string) => api.get(url).then(res => res.data.data || res.data);
 
 export default function DashboardPage() {
   const user = useAuthStore(state => state.user);
-  const { data: stats, isLoading } = useSWR('/dashboard', fetcher);
+  
+  // Parallel fetch using SWR
+  const { data: stats, error: statsError } = useSWR('/dashboard', fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 10000,
+  });
+  
+  const { data: users, isLoading: usersLoading } = useSWR('/users?limit=100', fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30000,
+  });
+  
+  const allUsers = Array.isArray(users) ? users : users?.data || [];
+  const totalMembers = allUsers.filter((u: any) => u.roleName !== 'ADMIN').length;
+  const isLoading = !stats && !statsError;
+  
   const isAdmin = user?.role === 'ADMIN';
 
   const dashboardStats = [
-    { name: 'Total Tasks', value: stats?.totalTasks || 0, icon: CheckCircle2, color: 'text-blue-600', bg: 'bg-blue-100' },
-    { name: 'Pending Tasks', value: stats?.pendingTasks || 0, icon: Clock, color: 'text-orange-600', bg: 'bg-orange-100' },
-    { name: 'Completed Tasks', value: stats?.completedTasks || 0, icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-100' },
-    { name: 'Active Projects', value: stats?.activeProjects || 0, icon: FolderKanban, color: 'text-purple-600', bg: 'bg-purple-100' },
+    { name: 'Total Tasks', value: stats?.totalTasks || 0, icon: CheckCircle2, color: 'text-blue-500' },
+    { name: 'Pending Tasks', value: stats?.pendingTasks || 0, icon: Clock, color: 'text-amber-500' },
+    { name: 'Completed Tasks', value: stats?.completedTasks || 0, icon: TrendingUp, color: 'text-emerald-500' },
+    { name: 'Active Projects', value: stats?.activeProjects || 0, icon: FolderKanban, color: 'text-violet-500' },
   ];
 
   return (
     <div className="space-y-8">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight text-gray-900">Dashboard</h2>
-        <p className="text-gray-500 mt-1">Here&apos;s what&apos;s happening with your projects today.</p>
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h2 className="text-4xl font-black tracking-tight text-slate-900">Dashboard</h2>
+          <p className="text-slate-500 mt-1 font-medium italic">Overview of your productivity and team.</p>
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {dashboardStats.map((stat) => {
           const Icon = stat.icon;
           return (
-            <div key={stat.name} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <Icon className={`w-16 h-16 ${stat.color}`} />
+            <div key={stat.name} className="bg-white border border-slate-100 p-6 rounded-2xl shadow-sm hover:shadow-md transition-all group">
+              <div className="flex items-center justify-between mb-4">
+                <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center bg-slate-50 border border-slate-100 shadow-sm group-hover:scale-110 transition-transform", stat.color)}>
+                  <Icon className="w-5 h-5" />
+                </div>
               </div>
-              <div className="flex items-center gap-4 mb-4">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${stat.bg} ${stat.color}`}>
-                  <Icon className="w-6 h-6" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">{stat.name}</p>
-                  <p className="text-3xl font-bold text-gray-900">{isLoading ? '-' : stat.value}</p>
-                </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">{stat.name}</p>
+                <p className="text-4xl font-black text-slate-900 tracking-tight">
+                  {isLoading ? (
+                    <span className="inline-block w-12 h-8 bg-slate-100 animate-pulse rounded" />
+                  ) : stat.value}
+                </p>
               </div>
             </div>
           );
         })}
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <div className={`${isAdmin ? 'col-span-2' : 'col-span-full'} bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col min-h-[400px]`}>
-          <h3 className="text-lg font-bold text-gray-900 mb-6">Recent Activity</h3>
-          <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
-            <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-              <TrendingUp className="w-8 h-8 text-gray-300" />
-            </div>
-            <p>Connect backend timeline events here.</p>
+      <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+        <div className="lg:col-span-2 bg-white border border-slate-100 p-8 rounded-[2.5rem] shadow-sm flex flex-col min-h-[400px]">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="text-xl font-black text-slate-900 flex items-center gap-3">
+              <Activity className="w-6 h-6 text-blue-600" />
+              Recent Activity
+            </h3>
+          </div>
+          <div className="flex-1 flex flex-col items-center justify-center text-center opacity-10">
+            <Clock className="w-16 h-16 mb-6" />
+            <p className="text-xs font-black uppercase tracking-widest">No activity recorded yet</p>
           </div>
         </div>
 
         {isAdmin && (
-          <div className="col-span-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-gray-900">Active Members</h3>
-              <div className="w-11 h-11 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center">
-                <Users className="w-6 h-6" />
+          <div className="lg:col-span-1 bg-white border border-slate-100 p-8 rounded-[2.5rem] shadow-sm flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="text-xl font-black text-slate-900">Team Performance</h3>
+                <Users className="w-6 h-6 text-blue-600 opacity-20" />
               </div>
+              <p className="text-8xl font-black text-slate-900 tracking-tighter">
+                {usersLoading ? (
+                  <span className="inline-block w-24 h-24 bg-slate-100 animate-pulse rounded-2xl" />
+                ) : totalMembers}
+              </p>
+              <p className="text-xs text-slate-400 mt-6 font-medium italic">
+                Active collaborators across all projects.
+              </p>
             </div>
-            <p className="text-5xl font-bold text-gray-900">{isLoading ? '-' : stats?.activeMembers || 0}</p>
-            <p className="text-sm text-gray-500 mt-3">Currently active team members.</p>
+            <div className="pt-8 mt-8 border-t border-slate-100">
+              <Link href="/dashboard/team" className="w-full block text-center py-4 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black rounded-2xl transition-all uppercase tracking-widest shadow-lg shadow-blue-600/20">
+                Manage Organization
+              </Link>
+            </div>
           </div>
         )}
       </div>
     </div>
   );
 }
+

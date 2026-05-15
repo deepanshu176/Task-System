@@ -1,37 +1,69 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/auth-server';
 import { connectDB } from '@/lib/db';
+import { getCachedData } from '@/lib/redis';
 
 export async function GET(request: NextRequest) {
   try {
-    const { user, error } = await authenticateRequest(request);
+    const { user, error, status } = await authenticateRequest(request);
     if (error || !user) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ success: false, message: error || 'Unauthorized' }, { status: status || 401 });
     }
 
-    const db = await connectDB();
+    const isAdmin = user.role === 'ADMIN';
+    const cacheKey = `dashboard_stats:${user._id}`;
 
-    const [totalProjects, totalTasks, completedTasks, activeProjects] = await Promise.all([
-      db.collection('projects').countDocuments({ creatorId: user._id }),
-      db.collection('tasks').countDocuments({ assigneeId: user._id }),
-      db.collection('tasks').countDocuments({ assigneeId: user._id, status: 'COMPLETED' }),
-      db.collection('projects').countDocuments({ creatorId: user._id, status: { $ne: 'COMPLETED' } })
-    ]);
+    const stats = await getCachedData(cacheKey, async () => {
+      const db = await connectDB();
+      const userId = user._id;
 
-    const pendingTasks = totalTasks - completedTasks;
+      // Parallel execution of all count operations
+      const [totalProjects, totalTasks, completedTasks, activeProjects] = await Promise.all([
+        db.collection('projects').countDocuments(isAdmin ? {} : { 
+          $or: [{ creatorId: userId }, { members: { $in: [userId] } }] 
+        }),
+        db.collection('tasks').countDocuments(isAdmin ? {} : { 
+          $or: [
+            { creatorId: userId }, 
+            { assigneeId: userId }, 
+            { assigneeIds: { $in: [userId] } }
+          ] 
+        }),
+        db.collection('tasks').countDocuments(isAdmin ? { status: 'COMPLETED' } : { 
+          $and: [
+            { status: 'COMPLETED' },
+            { $or: [
+              { creatorId: userId }, 
+              { assigneeId: userId }, 
+              { assigneeIds: { $in: [userId] } }
+            ]}
+          ]
+        }),
+        db.collection('projects').countDocuments(isAdmin ? { status: { $ne: 'COMPLETED' } } : { 
+          $and: [
+            { status: { $ne: 'COMPLETED' } },
+            { $or: [{ creatorId: userId }, { members: { $in: [userId] } }] }
+          ]
+        })
+      ]);
 
-    return NextResponse.json({
-      success: true,
-      data: {
+      return {
+        totalProjects,
         totalTasks,
-        pendingTasks,
+        pendingTasks: totalTasks - completedTasks,
         completedTasks,
         activeProjects,
         lastUpdated: new Date()
-      }
+      };
+    }, 30); // Cache for 30 seconds to balance freshness and speed
+
+    return NextResponse.json({
+      success: true,
+      data: stats
     });
   } catch (error) {
     console.error('Error fetching dashboard:', error);
     return NextResponse.json({ success: false, message: 'Internal server error' }, { status: 500 });
   }
 }
+

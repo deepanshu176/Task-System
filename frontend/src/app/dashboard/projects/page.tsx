@@ -1,255 +1,193 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { useEffect, useState } from "react";
+import { useState, useMemo } from "react";
 import useSWR from "swr";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import toast from "react-hot-toast";
-import { Plus, CheckSquare, Edit2, Trash2, FolderKanban } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { 
+  Plus, 
+  Search, 
+  MoreVertical, 
+  Calendar, 
+  Users, 
+  Edit2, 
+  Trash2,
+  FolderKanban
+} from "lucide-react";
 import { Modal } from "@/components/ui/modal";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 const fetcher = (url: string) => api.get(url).then(res => res.data.data || res.data);
 
 export default function ProjectsPage() {
-  const { data: projects, mutate, isLoading } = useSWR('/projects', fetcher);
   const user = useAuthStore(state => state.user);
-  
+  const [search, setSearch] = useState("");
   const [isModalOpen, setModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<any>(null);
+
+  const { data: projects, mutate: mutateProjects, isLoading } = useSWR('/projects', fetcher);
+  const { data: users } = useSWR('/users', fetcher);
+
+  const filteredProjects = useMemo(() => {
+    if (!projects) return [];
+    return projects.filter((p: any) => 
+      p.name.toLowerCase().includes(search.toLowerCase()) || 
+      p.description?.toLowerCase().includes(search.toLowerCase())
+    );
+  }, [projects, search]);
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this project?')) return;
     try {
       await api.delete(`/projects/${id}`);
-      mutate();
+      mutateProjects();
       toast.success('Project deleted');
-    } catch {
+    } catch (error: any) {
       toast.error('Failed to delete project');
     }
   };
 
-  if (isLoading) return <div className="p-8 flex justify-center text-gray-500">Loading projects...</div>;
-
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center mb-8">
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900">Projects</h2>
-          <p className="text-gray-500 mt-1">Manage and track your team&apos;s projects.</p>
+          <h2 className="text-4xl font-black tracking-tight text-[var(--foreground)]">Projects</h2>
+          <p className="text-[var(--foreground)] opacity-40 mt-1 font-medium italic">Manage and track your operational projects.</p>
         </div>
-        {(user?.permissions?.includes('CREATE_PROJECT') || user?.role === 'ADMIN') && (
-          <Button onClick={() => { setSelectedProject(null); setModalOpen(true); }} className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="w-4 h-4 mr-2" /> New Project
+        {user?.role === 'ADMIN' && (
+          <Button 
+            onClick={() => { setSelectedProject(null); setModalOpen(true); }} 
+            className="bg-lumina-primary hover:bg-lumina-primary/90 text-white font-black h-12 px-6 rounded-xl shadow-lg transition-all flex items-center gap-2"
+          >
+            <Plus className="w-5 h-5" /> New Project
           </Button>
         )}
       </div>
 
-      {projects?.length === 0 ? (
-        <div className="bg-white border border-gray-200 rounded-2xl p-12 flex flex-col items-center justify-center text-center shadow-sm">
-          <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-            <FolderKanban className="w-8 h-8 text-gray-400" />
-          </div>
-          <h3 className="text-lg font-bold text-gray-900 mb-1">No projects yet</h3>
-          <p className="text-gray-500 mb-6">Get started by creating your first project.</p>
-          {(user?.permissions?.includes('CREATE_PROJECT') || user?.role === 'ADMIN') && (
-            <Button onClick={() => { setSelectedProject(null); setModalOpen(true); }}>
-              Create Project
-            </Button>
-          )}
+      <div className="glass-card p-4 border-[var(--obsidian-border)] flex items-center gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-20" />
+          <Input 
+            placeholder="Search projects..." 
+            className="pl-10 bg-[var(--background)] border-[var(--obsidian-border)] h-11 rounded-lg text-sm"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {projects?.map((project: any) => {
-            const totalTasks = project.tasks?.length || 0;
-            const completedTasks = project.tasks?.filter((t: any) => t.status === 'COMPLETED').length || 0;
-            const progress = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
+      </div>
 
-            return (
-              <div key={project._id} className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all group overflow-hidden flex flex-col">
-                <div className="p-6 flex-1">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex gap-2">
-                      <span className={`px-2.5 py-1 rounded-md text-xs font-semibold ${
-                        project.status === 'COMPLETED' ? 'bg-green-50 text-green-700' :
-                        project.status === 'IN_PROGRESS' ? 'bg-blue-50 text-blue-700' :
-                        'bg-gray-100 text-gray-700'
-                      }`}>
-                        {project.status.replace('_', ' ')}
-                      </span>
-                    </div>
-                    {(user?.permissions?.includes('EDIT_PROJECT') || user?.role === 'ADMIN') && (
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => { setSelectedProject(project); setModalOpen(true); }} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition">
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => handleDelete(project._id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  <h3 className="text-lg font-bold text-gray-900 mb-2">{project.name}</h3>
-                  <p className="text-sm text-gray-500 line-clamp-2 mb-6">{project.description || 'No description provided.'}</p>
-
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">Progress</span>
-                      <span className="font-bold text-gray-900">{progress}%</span>
-                    </div>
-                    <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-blue-600 rounded-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-sm text-gray-500 font-medium">
-                    <CheckSquare className="w-4 h-4" />
-                    {completedTasks}/{totalTasks} tasks
-                  </div>
-                  <div className="flex -space-x-2 overflow-hidden">
-                    {project.members?.slice(0, 3).map((m: any) => (
-                      <div key={m.userId} className="inline-block h-8 w-8 rounded-full ring-2 ring-white bg-gradient-to-tr from-blue-500 to-indigo-500 flex items-center justify-center text-white text-xs font-bold" title={m.user.name}>
-                        {m.user.name?.charAt(0).toUpperCase()}
-                      </div>
-                    ))}
-                    {(project.members?.length || 0) > 3 && (
-                      <div className="inline-block h-8 w-8 rounded-full ring-2 ring-white bg-gray-100 flex items-center justify-center text-gray-600 text-xs font-bold">
-                        +{project.members.length - 3}
-                      </div>
-                    )}
-                  </div>
-                </div>
+      <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        {isLoading ? (
+          <div className="col-span-full py-20 text-center opacity-20 font-bold uppercase tracking-widest">Loading Projects...</div>
+        ) : filteredProjects.map((project: any) => (
+          <div key={project._id} className="glass-card p-6 border-[var(--obsidian-border)] flex flex-col group">
+            <div className="flex justify-between items-start mb-6">
+              <div className="w-12 h-12 rounded-xl bg-lumina-primary/10 text-lumina-primary flex items-center justify-center font-black text-2xl">
+                {project.name.charAt(0).toUpperCase()}
               </div>
-            );
-          })}
-        </div>
-      )}
+              {user?.role === 'ADMIN' && (
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                  <button onClick={() => { setSelectedProject(project); setModalOpen(true); }} className="p-2 hover:bg-[var(--foreground)]/5 rounded-lg opacity-40 hover:opacity-100"><Edit2 className="w-4 h-4" /></button>
+                  <button onClick={() => handleDelete(project._id)} className="p-2 hover:bg-red-500/10 text-red-500 rounded-lg opacity-40 hover:opacity-100"><Trash2 className="w-4 h-4" /></button>
+                </div>
+              )}
+            </div>
+
+            <h3 className="text-xl font-bold text-[var(--foreground)] mb-2">{project.name}</h3>
+            <p className="text-sm text-[var(--foreground)] opacity-40 mb-6 line-clamp-2 italic font-medium">{project.description || 'No description provided.'}</p>
+
+            <div className="mt-auto pt-6 border-t border-[var(--obsidian-border)] flex items-center justify-between">
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest opacity-30">
+                <Users className="w-3.5 h-3.5" />
+                <span>{project.members?.length || 0} Members</span>
+              </div>
+              <div className="flex -space-x-2">
+                {project.members?.slice(0, 3).map((m: any, i: number) => (
+                  <div key={i} className="w-6 h-6 rounded-full bg-lumina-primary flex items-center justify-center text-[8px] font-black text-white ring-2 ring-[var(--background)]">
+                    {m.user?.name?.charAt(0) || '?'}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
 
       <CreateEditProjectModal 
-        isOpen={isModalOpen}
-        onClose={() => setModalOpen(false)}
+        isOpen={isModalOpen} 
+        onClose={() => setModalOpen(false)} 
         project={selectedProject}
-        onSuccess={() => mutate()}
+        users={users || []}
+        onSuccess={() => mutateProjects()}
       />
     </div>
   );
 }
 
-function CreateEditProjectModal({ isOpen, onClose, project, onSuccess }: { isOpen: boolean, onClose: () => void, project: any, onSuccess: () => void }) {
+function CreateEditProjectModal({ isOpen, onClose, project, users, onSuccess }: { isOpen: boolean, onClose: () => void, project: any, users: any[], onSuccess: () => void }) {
   const [loading, setLoading] = useState(false);
-  const { data: usersData } = useSWR('/users?limit=100', fetcher);
-  const users = usersData?.data || [];
-  
-  const [formData, setFormData] = useState({
-    name: project?.name || '',
-    description: project?.description || '',
-    status: project?.status || 'TODO',
-    memberIds: project?.members?.map((m: any) => m.userId) || []
-  });
+  const [formData, setFormData] = useState({ name: '', description: '' });
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    setFormData({
-      name: project?.name || '',
-      description: project?.description || '',
-      status: project?.status || 'TODO',
-      memberIds: project?.members?.map((m: any) => m.userId) || []
-    });
+  useMemo(() => {
+    if (isOpen) {
+      setFormData({
+        name: project?.name || '',
+        description: project?.description || '',
+      });
+      setSelectedMembers(project?.members?.map((m: any) => m.userId) || []);
+    }
   }, [isOpen, project]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
     setLoading(true);
     try {
-      if (project) {
-        await api.put(`/projects/${project._id}`, formData);
-        toast.success('Project updated');
-      } else {
-        await api.post('/projects', formData);
-        toast.success('Project created');
-      }
+      const payload = { ...formData, members: selectedMembers };
+      if (project) await api.put(`/projects/${project._id}`, payload);
+      else await api.post('/projects', payload);
       onSuccess();
       onClose();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to save project');
+    } catch {
+      toast.error('Failed to save project');
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title={project ? 'Edit Project' : 'Create Project'}>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">Project Name</label>
-          <Input 
-            value={formData.name}
-            onChange={(e) => setFormData({...formData, name: e.target.value})}
-            placeholder="e.g., Q3 Marketing Campaign"
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Description</label>
-          <textarea 
-            value={formData.description}
-            onChange={(e) => setFormData({...formData, description: e.target.value})}
-            className="w-full border border-gray-300 rounded-md p-2 outline-none focus:ring-2 focus:ring-blue-600 min-h-[100px]"
-            placeholder="What is this project about?"
-          />
-        </div>
-        {project && (
-          <div>
-            <label className="block text-sm font-medium mb-1">Status</label>
-            <select 
-              value={formData.status}
-              onChange={(e) => setFormData({...formData, status: e.target.value})}
-              className="w-full border border-gray-300 rounded-md p-2 outline-none focus:ring-2 focus:ring-blue-600"
-            >
-              <option value="TODO">To Do</option>
-              <option value="IN_PROGRESS">In Progress</option>
-              <option value="COMPLETED">Completed</option>
-            </select>
-          </div>
-        )}
-        
-        <div>
-          <label className="block text-sm font-medium mb-1">Assign Members</label>
-          <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto p-2 border border-gray-200 rounded-md bg-gray-50/50">
-            {users.length === 0 ? (
-              <p className="col-span-2 text-sm text-gray-500 px-1 py-2">No users available.</p>
-            ) : users.map((u: any) => {
-              const isSelected = formData.memberIds.includes(u.id);
-              return (
-                <label key={u.id} className="flex items-center space-x-2 text-sm cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={isSelected}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setFormData({...formData, memberIds: [...formData.memberIds, u.id]});
-                      } else {
-                        setFormData({...formData, memberIds: formData.memberIds.filter((id: string) => id !== u.id)});
-                      }
-                    }}
-                    className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                  />
-                  <span>{u.name}</span>
-                </label>
-              );
-            })}
-          </div>
-        </div>
+  const toggleMember = (userId: string) => {
+    setSelectedMembers(prev => prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]);
+  };
 
-        <div className="flex justify-end gap-2 pt-4">
-          <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-          <Button type="submit" disabled={loading}>{loading ? 'Saving...' : 'Save Project'}</Button>
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={project ? 'Edit Project' : 'New Project'}>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div>
+          <label className="block text-[10px] font-black uppercase tracking-widest opacity-40 mb-2">Project Name</label>
+          <Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="e.g. Website Redesign" required />
+        </div>
+        <div>
+          <label className="block text-[10px] font-black uppercase tracking-widest opacity-40 mb-2">Description</label>
+          <Input value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} placeholder="Project goals..." />
+        </div>
+        <div>
+          <label className="block text-[10px] font-black uppercase tracking-widest opacity-40 mb-2">Assign Team</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-4 border border-[var(--obsidian-border)] rounded-xl bg-[var(--obsidian-surface)]">
+            {users.map((u: any) => (
+              <label key={u._id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-[var(--foreground)]/5 cursor-pointer">
+                <input type="checkbox" checked={selectedMembers.includes(u._id)} onChange={() => toggleMember(u._id)} className="w-4 h-4 rounded border-[var(--obsidian-border)] text-lumina-primary focus:ring-lumina-primary/30" />
+                <span className="text-xs font-bold text-[var(--foreground)] opacity-60">{u.name}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 pt-6 border-t border-[var(--obsidian-border)]">
+          <button type="button" onClick={onClose} className="px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest opacity-40 hover:opacity-100 transition-all">Cancel</button>
+          <button type="submit" disabled={loading} className="px-8 py-2.5 bg-lumina-primary hover:bg-lumina-primary/90 text-white text-xs font-black uppercase tracking-widest rounded-xl shadow-lg">{loading ? 'Saving...' : 'Save Project'}</button>
         </div>
       </form>
     </Modal>

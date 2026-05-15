@@ -1,117 +1,88 @@
-# TaskFlow - Task Management Application
+# Lumina | High-Performance Work OS
 
-A secure, modern task management system built with **Next.js 14**, **TypeScript**, **MongoDB Atlas**, and **Tailwind CSS**. Single unified application with integrated backend API routes and frontend.
+A secure, enterprise-grade task management system built with **Next.js 14**, **TypeScript**, **MongoDB Atlas**, and **Upstash Redis**. Engineered for high-velocity teams with a focus on extreme performance and scalability.
 
-## ?? Features
+## 🚀 Performance Features
 
-- ? User authentication with JWT
-- ? Role-based access control (RBAC)
-- ? Project management
-- ? Task tracking with assignments
-- ? Permission-based authorization
-- ? Real-time dashboard statistics
-- ? Responsive UI with Tailwind CSS
-- ? Production-ready security
-- ? Single deployment package for Railway
+- ⚡ **Advanced Connection Pooling**: Robust MongoDB singleton with optimized pooling for Atlas M0.
+- 🏎️ **Multi-Layer Caching**: High-speed caching using Upstash Redis with a secondary in-memory fallback for ultra-low latency.
+- 📡 **Parallel API Architecture**: Refactored backend routes using `Promise.all` to eliminate waterfall bottlenecks.
+- 🎨 **Skeleton Loading**: Intelligent `loading.tsx` and SWR deduping for an instant, "premium" feel.
+- 🔐 **Optimized Auth Guard**: Background token verification and session persistence for seamless transitions.
+- 📉 **Scalable Pagination**: Backend-enforced limits and optimized aggregation pipelines for large datasets.
 
-## ?? Tech Stack
+## 🛠️ Tech Stack
 
-- **Frontend**: Next.js 14, React 18, TypeScript, Tailwind CSS
-- **Backend**: Next.js API Routes, Node.js
-- **Database**: MongoDB Atlas
-- **Authentication**: JWT with bcrypt
+- **Frontend**: Next.js 14 (App Router), React 18, TypeScript, Tailwind CSS
+- **State Management**: Zustand (with Persistence)
+- **Data Fetching**: SWR (Optimized for Deduping & Caching)
+- **Database**: MongoDB Atlas (Driver-based for Speed)
+- **Caching**: Upstash Redis (Serverless)
+- **Authentication**: JWT with High-Performance verification layers
 
-## ??? Project Structure
+## 📁 Project Structure
 
-Everything is now in the **frontend** folder:
-- rontend/src/app/api/ - All backend API routes (auth, users, projects, tasks, roles, permissions, dashboard)
-- rontend/src/app/dashboard/ - Frontend pages
-- rontend/src/components/ - Reusable React components
-- rontend/src/lib/ - Utilities (db.ts, jwt-server.ts, auth-server.ts, validation.ts)
+Everything is located in the **frontend** directory for a unified deployment:
+- `src/app/api/`: Optimized backend routes with caching layers.
+- `src/app/dashboard/`: High-performance frontend pages with skeleton states.
+- `src/components/`: Modular UI components and the Optimized `AuthGuard`.
+- `src/lib/`: Core logic (Unified `db.ts`, Caching `redis.ts`, Auth `auth-server.ts`).
 
-## ?? Quick Start
+## ⚙️ Quick Start
 
 ### 1. Install Dependencies
-`ash
+```bash
 cd frontend
 npm install
-`
+```
 
 ### 2. Configure Environment
-Create rontend/.env.local:
-`env
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/?appName=Cluster0
+Create `frontend/.env.local`:
+```env
+# Database
+MONGODB_URI=your-mongodb-atlas-uri
 MONGODB_DATABASE=taskmanager
+
+# Caching (Optional but Recommended)
+UPSTASH_REDIS_REST_URL=your-upstash-url
+UPSTASH_REDIS_REST_TOKEN=your-upstash-token
+
+# Auth
 JWT_SECRET=your-32-character-secret-key-minimum
 NODE_ENV=development
-`
-
-Get MongoDB URI from [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
+```
 
 ### 3. Run Development Server
-`ash
+```bash
 npm run dev
-`
-
+```
 Access at: http://localhost:3000
 
-## ?? Authentication Flow
+## 🚢 Deploy on Railway
 
-1. Sign up at /signup
-2. Login at /login
-3. Redirects to /dashboard
-4. API token stored in browser
+1. **Push to GitHub**: Ensure your `frontend` directory is at the root or correctly configured in `railway.toml`.
+2. **Connect to Railway**: Select your repository and connect.
+3. **Set Variables**: Add `MONGODB_URI`, `JWT_SECRET`, and `UPSTASH_REDIS_REST_URL`.
+4. **Deploy**: Railway will automatically detect the Next.js project and deploy with high availability.
 
-## ?? Deploy on Railway
+## 📡 API Endpoints
 
-### One-Click Setup
-1. Push to GitHub
-2. Go to [Railway.app](https://railway.app)
-3. Create new project
-4. Connect GitHub repo
-5. Select repository
-6. Add environment variables:
-   - MONGODB_URI - MongoDB Atlas connection
-   - JWT_SECRET - 32+ character secret
-   - MONGODB_DATABASE - taskmanager
-   - NODE_ENV - production
-7. Deploy!
+All endpoints are optimized for speed and use `Authorization: Bearer <token>`.
 
-The app runs from rontend folder with automatic Next.js production build.
+### Auth & User
+- `POST /api/auth/login`: Secure login with lockout protection.
+- `GET /api/auth/me`: Lightweight user session retrieval.
+- `GET /api/users`: Optimized user listing with pagination support.
 
-## ?? API Endpoints
+### Workspace & Productivity
+- `GET /api/dashboard`: Aggregated stats with 30s Redis caching.
+- `GET /api/projects`: Project management with auto-invalidating cache.
+- `GET /api/tasks`: Task tracking with project-specific caching.
 
-All endpoints use Authorization: Bearer <token> header
+## 🛡️ Production Readiness
+- **Security Headers**: CSP, XSS protection, and frame denial configured in `next.config.mjs`.
+- **Database Security**: Automated index initialization for high-performance queries.
+- **Graceful Fallbacks**: The application remains fully functional even if the Redis cache layer is unavailable.
 
-### Auth
-- POST /api/auth/signup - Register new user
-- POST /api/auth/login - Login user
-- GET /api/auth/me - Current user info
-
-### Resources
-- GET /api/users - List users
-- GET /api/projects - List projects
-- POST /api/projects - Create project
-- GET /api/tasks - List tasks
-- POST /api/tasks - Create task
-- GET /api/roles - List roles
-- GET /api/permissions - List permissions
-- GET /api/dashboard - Dashboard stats
-
-## ?? Troubleshooting
-
-**Signup fails?**
-- Check MongoDB connection string
-- Verify JWT_SECRET is 32+ characters
-- Check browser console for errors
-
-**API not responding?**
-- Ensure dev server is running
-- Check MongoDB Atlas connection
-
-## ?? Files Removed
-- ackend/ folder - No longer needed
-- ercel.json - Deploying to Railway now
-
-## ? Ready to Deploy!
-Everything is optimized for easy Railway deployment. Just connect GitHub and go!
+---
+**Ready for Deployment!** This version is fine-tuned for production-grade stability and high-concurrency environments.

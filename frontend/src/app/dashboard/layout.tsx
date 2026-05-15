@@ -10,225 +10,166 @@ import {
   FolderKanban, 
   CheckSquare, 
   Users, 
-  Shield,
   LogOut,
   Bell,
-  Search,
   Settings,
-  UserCircle,
-  CheckCircle2
+  Zap,
+  Sun,
+  Moon,
+  BarChart3,
+  Search,
+  Menu,
+  X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Input } from "@/components/ui/input";
+import LivePresence from "@/components/LivePresence";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuthStore();
-  const [openMenu, setOpenMenu] = useState<'notifications' | 'settings' | null>(null);
-  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(true);
+  // Theme is forced to light as per user request
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
     router.push('/login');
   };
 
-  const closeMenu = () => setOpenMenu(null);
-
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Projects', href: '/dashboard/projects', icon: FolderKanban },
     { name: 'Tasks', href: '/dashboard/tasks', icon: CheckSquare },
     { name: 'Team', href: '/dashboard/team', icon: Users, perm: 'MANAGE_USERS' },
-    { name: 'Roles', href: '/dashboard/roles', icon: Shield, perm: 'MANAGE_USERS' },
+    { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3, perm: 'MANAGE_USERS' },
   ];
+
 
   return (
     <AuthGuard>
-      <div className="flex h-screen bg-[#FAFAFA] font-sans text-gray-900">
+      <div className="flex h-screen bg-[#F8FAFC] overflow-hidden font-sans text-slate-900">
+        
         {/* Sidebar */}
-        <aside className="w-64 bg-white border-r border-gray-200/60 hidden md:flex flex-col shadow-sm z-10">
-          <div className="p-6 flex items-center gap-3 border-b border-gray-100">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-inner shadow-blue-400">
-              <span className="text-white font-bold text-lg">T</span>
+        <aside className={cn(
+          "bg-white border-r border-slate-100 transition-all duration-300 flex flex-col z-30",
+          isSidebarOpen ? "w-64" : "w-20"
+        )}>
+          <div className="px-6 h-16 flex items-center border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-blue-600/20">
+                <Zap className="w-5 h-5 fill-current" />
+              </div>
+              <span className="font-black text-xl tracking-tighter text-slate-900">Lumina</span>
             </div>
-            <h1 className="text-xl font-bold text-gray-900 tracking-tight">TaskFlow</h1>
           </div>
           
-          <div className="px-4 py-4">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-2">Menu</p>
-            <nav className="flex-1 space-y-1">
-              {navItems.map((item) => {
-                const hasAccess = !item.perm || user?.permissions?.includes(item.perm) || user?.role === 'ADMIN';
-                if (!hasAccess) return null;
-                
-                const isActive = pathname === item.href;
-                const Icon = item.icon;
-                
-                return (
-                  <Link key={item.name} href={item.href}>
-                    <div className={cn(
-                      "flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-200",
-                      isActive 
-                        ? "bg-blue-50 text-blue-700 shadow-sm border border-blue-100" 
-                        : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
-                    )}>
-                      <Icon className={cn("w-5 h-5", isActive ? "text-blue-600" : "text-gray-400")} />
-                      <span className="font-medium text-sm">{item.name}</span>
-                    </div>
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
+          <nav className="flex-1 p-4 space-y-1">
+            {navItems.map((item) => {
+              const hasAccess = !item.perm || user?.permissions?.includes(item.perm) || user?.role === 'ADMIN';
+              if (!hasAccess) return null;
+              
+              const isActive = pathname === item.href;
+              const Icon = item.icon;
+              
+              return (
+                <Link key={item.name} href={item.href}>
+                  <div className={cn(
+                    "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all group",
+                    isActive 
+                      ? "bg-blue-600/10 text-blue-600 font-bold" 
+                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                  )}>
+                    <Icon className={cn("w-4.5 h-4.5", isActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600")} />
+                    <span className="text-sm">{item.name}</span>
+                  </div>
+                </Link>
+              );
+            })}
+          </nav>
 
-          <div className="mt-auto p-4 border-t border-gray-100">
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100 mb-2">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white font-bold shadow-sm">
-                {user?.name?.charAt(0).toUpperCase()}
-              </div>
-              <div className="overflow-hidden flex-1">
-                <p className="text-sm font-semibold text-gray-900 truncate">{user?.name}</p>
-                <p className="text-xs text-gray-500 truncate">{user?.role || 'User'}</p>
-              </div>
-            </div>
-            <button 
-              onClick={handleLogout}
-              className="flex w-full items-center space-x-3 px-3 py-2.5 rounded-xl text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="font-medium text-sm">Logout</span>
-            </button>
+          <div className="p-4 border-t border-slate-100">
+             <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-2xl">
+                <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-sm shadow-sm">
+                  {user?.name?.charAt(0).toUpperCase()}
+                </div>
+                <div className="overflow-hidden">
+                  <p className="text-xs font-black text-slate-900 truncate">{user?.name}</p>
+                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Workspace {user?.role}</p>
+                </div>
+             </div>
           </div>
         </aside>
 
-        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
-          
-          {/* Top Navbar */}
-          <header className="h-16 bg-white/80 backdrop-blur-md border-b border-gray-200/60 flex items-center justify-between px-8 sticky top-0 z-20">
-            <div className="flex items-center gap-4 w-96">
-              <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input 
-                  placeholder="Search projects, tasks..." 
-                  className="pl-9 bg-gray-50 border-gray-200 h-9 rounded-full text-sm focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:bg-white transition-all"
-                />
-              </div>
+        {/* Content */}
+        <div className="flex-1 flex flex-col h-screen overflow-hidden">
+          <header className="h-16 bg-white border-b border-slate-100 flex items-center justify-between px-8 z-20">
+            <div className="flex items-center gap-4">
+               <div className="relative group hidden md:block">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                  <input 
+                    placeholder="Search projects..."
+                    className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-medium outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600/30 w-72 transition-all"
+                  />
+               </div>
+               <LivePresence />
             </div>
             
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <button
-                  onClick={() => setOpenMenu(openMenu === 'notifications' ? null : 'notifications')}
-                  className={cn(
-                    "relative p-2 rounded-full transition-colors",
-                    openMenu === 'notifications' ? "text-blue-600 bg-blue-50" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-                  )}
-                  aria-label="Notifications"
-                >
-                  <Bell className="w-5 h-5" />
-                  {hasUnreadNotifications && (
-                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white"></span>
-                  )}
-                </button>
-                {openMenu === 'notifications' && (
-                  <div className="absolute right-0 top-12 w-80 rounded-xl border border-gray-200 bg-white shadow-xl z-50 overflow-hidden">
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                      <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
-                      {hasUnreadNotifications && (
-                        <button
-                          onClick={() => setHasUnreadNotifications(false)}
-                          className="text-xs font-medium text-blue-600 hover:text-blue-700"
-                        >
-                          Mark read
-                        </button>
-                      )}
-                    </div>
-                    <div className="p-2">
-                      {hasUnreadNotifications ? (
-                        <button
-                          onClick={() => {
-                            setHasUnreadNotifications(false);
-                            closeMenu();
-                            router.push('/dashboard/tasks');
-                          }}
-                          className="w-full text-left rounded-lg px-3 py-3 hover:bg-gray-50 transition-colors"
-                        >
-                          <p className="text-sm font-medium text-gray-900">Task board is ready</p>
-                          <p className="text-xs text-gray-500 mt-1">Open the task board to review current tasks.</p>
-                        </button>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center px-4 py-8 text-center">
-                          <CheckCircle2 className="w-8 h-8 text-green-500 mb-2" />
-                          <p className="text-sm font-medium text-gray-900">All caught up</p>
-                          <p className="text-xs text-gray-500 mt-1">No unread notifications.</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+            <div className="flex items-center gap-2 relative">
+              <button 
+                onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                className={cn(
+                  "p-2 rounded-xl transition-all relative group",
+                  isNotificationsOpen ? "bg-blue-600/10 text-blue-600" : "hover:bg-slate-50 text-slate-400 hover:text-slate-900"
                 )}
-              </div>
+              >
+                <Bell className="w-4.5 h-4.5" />
+                <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-rose-500 rounded-full border-2 border-white shadow-sm" />
+              </button>
 
-              <div className="relative">
-                <button
-                  onClick={() => setOpenMenu(openMenu === 'settings' ? null : 'settings')}
-                  className={cn(
-                    "p-2 rounded-full transition-colors",
-                    openMenu === 'settings' ? "text-blue-600 bg-blue-50" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-                  )}
-                  aria-label="Settings"
-                >
-                  <Settings className="w-5 h-5" />
-                </button>
-                {openMenu === 'settings' && (
-                  <div className="absolute right-0 top-12 w-72 rounded-xl border border-gray-200 bg-white shadow-xl z-50 overflow-hidden">
-                    <div className="px-4 py-4 border-b border-gray-100">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white font-bold">
-                          {user?.name?.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-gray-900 truncate">{user?.name}</p>
-                          <p className="text-xs text-gray-500 truncate">{user?.email}</p>
-                        </div>
-                      </div>
+              {/* Notifications Popover */}
+              {isNotificationsOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setIsNotificationsOpen(false)} />
+                  <div className="absolute top-full right-0 mt-4 w-80 bg-white border border-slate-100 rounded-[2rem] shadow-[0_20px_50px_-12px_rgba(15,23,42,0.2)] z-50 overflow-hidden">
+                    <div className="p-6 border-b border-slate-50 flex items-center justify-between">
+                      <h4 className="font-black text-xs uppercase tracking-widest text-slate-900">Notifications</h4>
+                      <button className="text-[10px] font-black text-blue-600 hover:text-blue-700 transition-colors">Clear All</button>
                     </div>
-                    <div className="p-2">
-                      <Link href="/dashboard" onClick={closeMenu} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                        <UserCircle className="w-4 h-4 text-gray-400" />
-                        Profile overview
-                      </Link>
-                      {(user?.permissions?.includes('MANAGE_USERS') || user?.role === 'ADMIN') && (
-                        <Link href="/dashboard/team" onClick={closeMenu} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                          <Users className="w-4 h-4 text-gray-400" />
-                          Manage team
-                        </Link>
-                      )}
-                      {(user?.permissions?.includes('MANAGE_USERS') || user?.role === 'ADMIN') && (
-                        <Link href="/dashboard/roles" onClick={closeMenu} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                          <Shield className="w-4 h-4 text-gray-400" />
-                          Roles and permissions
-                        </Link>
-                      )}
+                    <div className="max-h-80 overflow-y-auto no-scrollbar">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="p-6 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 cursor-pointer group">
+                           <div className="flex gap-4">
+                              <div className="w-9 h-9 rounded-xl bg-blue-600/10 flex items-center justify-center text-blue-600 font-black text-[10px] flex-shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                                 {i === 1 ? 'JD' : i === 2 ? 'AS' : 'LM'}
+                              </div>
+                              <div className="space-y-1">
+                                 <p className="text-xs font-bold text-slate-900 leading-tight">
+                                    {i === 1 ? 'John Doe assigned you to a new task' : i === 2 ? 'System Update: Redis Caching Active' : 'Task "Deploy to Production" completed'}
+                                 </p>
+                                 <p className="text-[10px] text-slate-400 font-medium italic">2 hours ago</p>
+                              </div>
+                           </div>
+                        </div>
+                      ))}
                     </div>
-                    <div className="p-2 border-t border-gray-100">
-                      <button
-                        onClick={handleLogout}
-                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50"
-                      >
-                        <LogOut className="w-4 h-4" />
-                        Logout
-                      </button>
+                    <div className="p-4 bg-slate-50 text-center">
+                       <button className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors">View All Activity</button>
                     </div>
                   </div>
-                )}
-              </div>
+                </>
+              )}
+              <Link href="/dashboard/settings" className="p-2 rounded-xl hover:bg-slate-50 text-slate-400 hover:text-slate-900 transition-colors">
+                <Settings className="w-4.5 h-4.5" />
+              </Link>
+              <div className="h-4 w-px bg-slate-100 mx-2" />
+              <button onClick={handleLogout} className="p-2 rounded-xl hover:bg-rose-50 text-rose-500 transition-colors">
+                <LogOut className="w-4.5 h-4.5" />
+              </button>
             </div>
           </header>
 
-          {/* Scrollable Content */}
-          <main className="flex-1 overflow-y-auto bg-[#FAFAFA] p-8">
+          <main className="flex-1 overflow-y-auto p-8 bg-[#F8FAFC]">
             <div className="max-w-6xl mx-auto">
               {children}
             </div>

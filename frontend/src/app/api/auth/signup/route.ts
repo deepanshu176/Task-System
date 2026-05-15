@@ -4,6 +4,7 @@ import { connectDB } from '@/lib/db';
 import { signupSchema } from '@/lib/validation';
 import { generateToken } from '@/lib/jwt-server';
 import { ObjectId } from 'mongodb';
+import { ZodError } from 'zod';
 
 const BCRYPT_ROUNDS = 10;
 
@@ -76,9 +77,9 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error('Signup error:', error);
-    if (error instanceof Error && error.message.includes('validation')) {
+    if (error instanceof ZodError) {
       return NextResponse.json(
-        { success: false, message: error.message },
+        { success: false, message: error.issues[0].message || 'Validation failed' },
         { status: 400 }
       );
     }

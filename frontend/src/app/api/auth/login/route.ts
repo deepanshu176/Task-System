@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcrypt';
-import { connectDB } from '@/lib/db';
+import { connectDB } from '@/lib/mongodb';
 import { loginSchema } from '@/lib/validation';
 import { generateToken } from '@/lib/jwt-server';
+import { ZodError } from 'zod';
 
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes
@@ -101,12 +102,19 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error('Login error:', error);
-    if (error instanceof Error && error.message.includes('validation')) {
+    if (error instanceof ZodError) {
       return NextResponse.json(
-        { success: false, message: error.message },
+        { success: false, message: error.issues[0].message || 'Validation failed' },
         { status: 400 }
       );
+    }
+    if (error instanceof Error) {
+      if (error.name === 'MongoServerSelectionError' || error.name === 'MongoNetworkError') {
+        return NextResponse.json(
+          { success: false, message: 'Database unreachable. Please check your Atlas IP whitelist.' }, 
+          { status: 503 }
+        );
+      }
     }
     return NextResponse.json(
       { success: false, message: 'Internal server error' },

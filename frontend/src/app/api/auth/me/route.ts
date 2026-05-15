@@ -1,20 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/auth-server';
-import { connectDB } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   try {
-    const { user, error } = await authenticateRequest(request);
+    const { user, error, status } = await authenticateRequest(request);
     
     if (error || !user) {
       return NextResponse.json(
         { success: false, message: error || 'Unauthorized' },
-        { status: 401 }
+        { status: status || 401 }
       );
     }
-
-    const db = await connectDB();
-    const role = await db.collection('roles').findOne({ _id: user.roleId });
 
     return NextResponse.json(
       {
@@ -23,7 +19,8 @@ export async function GET(request: NextRequest) {
           id: user._id.toString(),
           email: user.email,
           name: user.name,
-          role: role?.name || 'MEMBER',
+          role: user.role || 'MEMBER',
+          permissions: user.permissions || [],
           isActive: user.isActive
         }
       },
@@ -37,3 +34,4 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
