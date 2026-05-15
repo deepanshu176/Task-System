@@ -12,23 +12,29 @@ const fetcher = (url: string) => api.get(url).then(res => res.data.data || res.d
 
 export default function DashboardPage() {
   const user = useAuthStore(state => state.user);
+  const isAdmin = user?.role === 'ADMIN';
+  const emptyStats = {
+    totalTasks: 0,
+    pendingTasks: 0,
+    completedTasks: 0,
+    activeProjects: 0,
+  };
   
   // Parallel fetch using SWR
-  const { data: stats, error: statsError } = useSWR('/dashboard', fetcher, {
+  const { data: stats } = useSWR('/dashboard', fetcher, {
     revalidateOnFocus: false,
     dedupingInterval: 10000,
+    fallbackData: emptyStats,
   });
   
-  const { data: users, isLoading: usersLoading } = useSWR('/users?limit=100', fetcher, {
+  const { data: users, isLoading: usersLoading } = useSWR(isAdmin ? '/users?limit=100' : null, fetcher, {
     revalidateOnFocus: false,
     dedupingInterval: 30000,
+    fallbackData: [],
   });
   
   const allUsers = Array.isArray(users) ? users : users?.data || [];
   const totalMembers = allUsers.filter((u: any) => u.roleName !== 'ADMIN').length;
-  const isLoading = !stats && !statsError;
-  
-  const isAdmin = user?.role === 'ADMIN';
 
   const dashboardStats = [
     { name: 'Total Tasks', value: stats?.totalTasks || 0, icon: CheckCircle2, color: 'text-blue-500' },
@@ -59,9 +65,7 @@ export default function DashboardPage() {
               <div>
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">{stat.name}</p>
                 <p className="text-4xl font-black text-slate-900 tracking-tight">
-                  {isLoading ? (
-                    <span className="inline-block w-12 h-8 bg-slate-100 animate-pulse rounded" />
-                  ) : stat.value}
+                  {stat.value}
                 </p>
               </div>
             </div>
@@ -110,4 +114,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-

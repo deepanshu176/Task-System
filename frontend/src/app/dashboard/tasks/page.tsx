@@ -6,7 +6,7 @@ import useSWR from "swr";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import toast from "react-hot-toast";
-import { Plus, Calendar, Edit2, Trash2, Zap, MoreHorizontal, Filter, Clock, CheckCircle2 } from "lucide-react";
+import { Plus, Calendar, Edit2, Trash2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
@@ -76,7 +76,6 @@ export default function TasksPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-4xl font-black tracking-tight text-slate-900">Tasks</h2>
-          <p className="text-slate-500 mt-1 font-medium italic">High-velocity Kanban board for team operations.</p>
         </div>
         <div className="flex items-center gap-4">
           <select

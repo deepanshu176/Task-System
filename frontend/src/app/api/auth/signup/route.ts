@@ -3,10 +3,28 @@ import bcrypt from 'bcrypt';
 import { connectDB } from '@/lib/db';
 import { signupSchema } from '@/lib/validation';
 import { generateToken } from '@/lib/jwt-server';
-import { ObjectId } from 'mongodb';
 import { ZodError } from 'zod';
+import { createLocalUser, isDatabaseUnavailable, publicUser } from '@/lib/local-auth-store';
 
 const BCRYPT_ROUNDS = 10;
+const DATABASE_TIMEOUT_MS = 3000;
+const allowLocalFallback = process.env.DATABASE_MODE !== 'mongodb';
+
+class DatabaseTimeoutError extends Error {
+  constructor() {
+    super('Database connection timed out');
+    this.name = 'DatabaseTimeoutError';
+  }
+}
+
+async function connectDBWithTimeout() {
+  return Promise.race([
+    connectDB(),
+    new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new DatabaseTimeoutError()), DATABASE_TIMEOUT_MS);
+    })
+  ]);
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,7 +34,35 @@ export async function POST(request: NextRequest) {
     const validatedData = signupSchema.parse(body);
     const { email, password, name } = validatedData;
     
-    const db = await connectDB();
+    let db;
+    try {
+      db = await connectDBWithTimeout();
+    } catch (error) {
+      if (!allowLocalFallback || !isDatabaseUnavailable(error)) {
+        throw error;
+      }
+
+      const { user, alreadyExists } = await createLocalUser({ email, password, name });
+      if (alreadyExists || !user) {
+        return NextResponse.json(
+          { success: false, message: 'Email already registered' },
+          { status: 409 }
+        );
+      }
+
+      const token = generateToken({ userId: user._id }, '7d');
+      return NextResponse.json(
+        {
+          success: true,
+          message: 'Account created locally because MongoDB is unreachable',
+          data: {
+            token,
+            user: publicUser(user)
+          }
+        },
+        { status: 201 }
+      );
+    }
 
     // Check if user exists
     const existingUser = await db.collection('users').findOne({ email });
@@ -81,6 +127,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, message: error.issues[0].message || 'Validation failed' },
         { status: 400 }
+      );
+    }
+    if (isDatabaseUnavailable(error)) {
+      return NextResponse.json(
+        { success: false, message: 'Database connection is taking too long. Please check MongoDB Atlas/network and try again.' },
+        { status: 503 }
       );
     }
     return NextResponse.json(

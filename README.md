@@ -1,88 +1,144 @@
-# Lumina | High-Performance Work OS
+# Lumina - Task Management Work OS
 
-A secure, enterprise-grade task management system built with **Next.js 14**, **TypeScript**, **MongoDB Atlas**, and **Upstash Redis**. Engineered for high-velocity teams with a focus on extreme performance and scalability.
+Lumina is a task and project management dashboard built with Next.js 14, TypeScript, Tailwind CSS, MongoDB, JWT authentication, SWR, and Zustand.
 
-## 🚀 Performance Features
+The app includes authentication, role-based admin access, project management, task Kanban boards, team management, and project-specific analytics.
 
-- ⚡ **Advanced Connection Pooling**: Robust MongoDB singleton with optimized pooling for Atlas M0.
-- 🏎️ **Multi-Layer Caching**: High-speed caching using Upstash Redis with a secondary in-memory fallback for ultra-low latency.
-- 📡 **Parallel API Architecture**: Refactored backend routes using `Promise.all` to eliminate waterfall bottlenecks.
-- 🎨 **Skeleton Loading**: Intelligent `loading.tsx` and SWR deduping for an instant, "premium" feel.
-- 🔐 **Optimized Auth Guard**: Background token verification and session persistence for seamless transitions.
-- 📉 **Scalable Pagination**: Backend-enforced limits and optimized aggregation pipelines for large datasets.
+## Admin Login
 
-## 🛠️ Tech Stack
+Use this admin account after running the project:
 
-- **Frontend**: Next.js 14 (App Router), React 18, TypeScript, Tailwind CSS
-- **State Management**: Zustand (with Persistence)
-- **Data Fetching**: SWR (Optimized for Deduping & Caching)
-- **Database**: MongoDB Atlas (Driver-based for Speed)
-- **Caching**: Upstash Redis (Serverless)
-- **Authentication**: JWT with High-Performance verification layers
+```text
+Email: admin@lumina.local
+Password: Admin@123
+```
 
-## 📁 Project Structure
+## Tech Stack
 
-Everything is located in the **frontend** directory for a unified deployment:
-- `src/app/api/`: Optimized backend routes with caching layers.
-- `src/app/dashboard/`: High-performance frontend pages with skeleton states.
-- `src/components/`: Modular UI components and the Optimized `AuthGuard`.
-- `src/lib/`: Core logic (Unified `db.ts`, Caching `redis.ts`, Auth `auth-server.ts`).
+- Next.js 14 with App Router
+- React 18
+- TypeScript
+- Tailwind CSS
+- MongoDB Atlas
+- JWT authentication
+- Zustand for persisted auth state
+- SWR for client data fetching
+- Local JSON database fallback for development
 
-## ⚙️ Quick Start
+## Project Structure
 
-### 1. Install Dependencies
+```text
+frontend/
+  src/app/                 Next.js app routes and API routes
+  src/app/api/             Backend API endpoints
+  src/app/dashboard/       Dashboard, projects, tasks, team, analytics pages
+  src/components/          Shared UI and layout components
+  src/lib/                 Database, auth, JWT, Redis/cache utilities
+  src/store/               Zustand auth store
+```
+
+## Setup
+
+Install dependencies:
+
 ```bash
 cd frontend
 npm install
 ```
 
-### 2. Configure Environment
 Create `frontend/.env.local`:
+
 ```env
-# Database
-MONGODB_URI=your-mongodb-atlas-uri
+DATABASE_MODE=mongodb
+MONGODB_URI=your-mongodb-atlas-connection-string
 MONGODB_DATABASE=taskmanager
-
-# Caching (Optional but Recommended)
-UPSTASH_REDIS_REST_URL=your-upstash-url
-UPSTASH_REDIS_REST_TOKEN=your-upstash-token
-
-# Auth
-JWT_SECRET=your-32-character-secret-key-minimum
+JWT_SECRET=your-32-character-secret-key
 NODE_ENV=development
 ```
 
-### 3. Run Development Server
+For offline/local development, use:
+
+```env
+DATABASE_MODE=local
+JWT_SECRET=your-32-character-secret-key
+NODE_ENV=development
+```
+
+Local mode stores data in:
+
+```text
+frontend/.data/local-db.json
+```
+
+## Run The Project
+
+```bash
+cd frontend
+npm run dev
+```
+
+Open:
+
+```text
+http://localhost:3000
+```
+
+## Main Features
+
+- User signup and login
+- Admin account support
+- Dashboard overview
+- Project CRUD
+- Task Kanban board
+- Team/member management
+- Project-specific analytics
+- Analytics filters for project and date range
+- Analytics JSON export
+- MongoDB mode and local JSON database mode
+
+## API Endpoints
+
+Authentication:
+
+- `POST /api/auth/signup`
+- `POST /api/auth/login`
+- `GET /api/auth/me`
+- `POST /api/auth/create-admin`
+
+Workspace:
+
+- `GET /api/dashboard`
+- `GET /api/projects`
+- `POST /api/projects`
+- `GET /api/tasks`
+- `POST /api/tasks`
+- `GET /api/users`
+- `GET /api/roles`
+- `GET /api/permissions`
+
+## Useful Commands
+
+Run development server:
+
 ```bash
 npm run dev
 ```
-Access at: http://localhost:3000
 
-## 🚢 Deploy on Railway
+Type-check:
 
-1. **Push to GitHub**: Ensure your `frontend` directory is at the root or correctly configured in `railway.toml`.
-2. **Connect to Railway**: Select your repository and connect.
-3. **Set Variables**: Add `MONGODB_URI`, `JWT_SECRET`, and `UPSTASH_REDIS_REST_URL`.
-4. **Deploy**: Railway will automatically detect the Next.js project and deploy with high availability.
+```bash
+npx tsc --noEmit
+```
 
-## 📡 API Endpoints
+Lint:
 
-All endpoints are optimized for speed and use `Authorization: Bearer <token>`.
+```bash
+npm run lint
+```
 
-### Auth & User
-- `POST /api/auth/login`: Secure login with lockout protection.
-- `GET /api/auth/me`: Lightweight user session retrieval.
-- `GET /api/users`: Optimized user listing with pagination support.
+## Notes
 
-### Workspace & Productivity
-- `GET /api/dashboard`: Aggregated stats with 30s Redis caching.
-- `GET /api/projects`: Project management with auto-invalidating cache.
-- `GET /api/tasks`: Task tracking with project-specific caching.
-
-## 🛡️ Production Readiness
-- **Security Headers**: CSP, XSS protection, and frame denial configured in `next.config.mjs`.
-- **Database Security**: Automated index initialization for high-performance queries.
-- **Graceful Fallbacks**: The application remains fully functional even if the Redis cache layer is unavailable.
-
----
-**Ready for Deployment!** This version is fine-tuned for production-grade stability and high-concurrency environments.
+- MongoDB Atlas must allow your current IP address in Network Access.
+- If MongoDB is slow on the first request, wait for the first connection to warm up.
+- `DATABASE_MODE=local` is useful for demos when internet or Atlas access is unavailable.
+- `.env.local` and `.data/` are ignored by Git.

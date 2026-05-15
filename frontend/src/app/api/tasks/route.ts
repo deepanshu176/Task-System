@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/auth-server';
 import { connectDB } from '@/lib/mongodb';
 import { getCachedData, invalidateCache } from '@/lib/redis';
-import { ObjectId } from 'mongodb';
+import { Document, Filter, ObjectId } from 'mongodb';
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     
     const tasks = await getCachedData(cacheKey, async () => {
       const db = await connectDB();
-      const query: any = {};
+      const query: Filter<Document> = {};
       
       if (user.role !== 'ADMIN') {
         const userIdString = user._id.toString();
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 
       return await db.collection('tasks')
         .find(query)
-        .project({ title: 1, description: 1, status: 1, priority: 1, dueDate: 1, assignees: 1 })
+        .project({ title: 1, description: 1, status: 1, priority: 1, dueDate: 1, assignees: 1, assigneeIds: 1, projectId: 1, creatorId: 1, createdAt: 1, updatedAt: 1 })
         .sort({ createdAt: -1 })
         .toArray();
     }, 60); // Cache for 60 seconds

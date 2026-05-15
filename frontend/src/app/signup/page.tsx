@@ -2,12 +2,17 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { AxiosError } from "axios";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, Eye, EyeOff, Zap, ArrowRight, Globe, UserPlus } from "lucide-react";
+import { Eye, EyeOff, Zap, Globe, UserPlus } from "lucide-react";
+
+type ApiErrorResponse = {
+  message?: string;
+};
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
@@ -17,17 +22,24 @@ export default function SignupPage() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const router = useRouter();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMessage("");
     try {
       await api.post('/auth/signup', formData);
       toast.success('Account created successfully.');
       router.push('/login');
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to create account');
+    } catch (error) {
+      const axiosError = error as AxiosError<ApiErrorResponse>;
+      const message = axiosError.code === 'ECONNABORTED'
+        ? 'Server is taking too long. Please try again.'
+        : axiosError.response?.data?.message || 'Failed to create account';
+      setErrorMessage(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -52,7 +64,10 @@ export default function SignupPage() {
               <Input 
                 type="text" 
                 value={formData.name} 
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
+                onChange={(e) => {
+                  setErrorMessage("");
+                  setFormData({ ...formData, name: e.target.value });
+                }} 
                 required 
                 className="h-14 bg-slate-50 border-slate-200 rounded-2xl focus:border-blue-600 focus:ring-0 transition-all font-medium placeholder:text-slate-300"
                 placeholder="John Doe"
@@ -64,7 +79,10 @@ export default function SignupPage() {
               <Input 
                 type="email" 
                 value={formData.email} 
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })} 
+                onChange={(e) => {
+                  setErrorMessage("");
+                  setFormData({ ...formData, email: e.target.value });
+                }} 
                 required 
                 className="h-14 bg-slate-50 border-slate-200 rounded-2xl focus:border-blue-600 focus:ring-0 transition-all font-medium placeholder:text-slate-300"
                 placeholder="name@company.com"
@@ -79,7 +97,10 @@ export default function SignupPage() {
                 <Input 
                   type={showPassword ? "text" : "password"} 
                   value={formData.password} 
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })} 
+                  onChange={(e) => {
+                    setErrorMessage("");
+                    setFormData({ ...formData, password: e.target.value });
+                  }} 
                   required 
                   className="h-14 bg-slate-50 border-slate-200 rounded-2xl focus:border-blue-600 focus:ring-0 transition-all pr-14 font-medium placeholder:text-slate-300"
                   placeholder="••••••••"
@@ -107,6 +128,12 @@ export default function SignupPage() {
                 {!loading && <UserPlus className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
               </span>
             </Button>
+
+            {errorMessage && (
+              <p className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">
+                {errorMessage}
+              </p>
+            )}
 
             <div className="relative flex items-center justify-center py-4">
               <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100"></div></div>

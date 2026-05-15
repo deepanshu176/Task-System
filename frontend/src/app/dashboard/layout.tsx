@@ -14,12 +14,8 @@ import {
   Bell,
   Settings,
   Zap,
-  Sun,
-  Moon,
   BarChart3,
   Search,
-  Menu,
-  X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import LivePresence from "@/components/LivePresence";
@@ -28,8 +24,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuthStore();
-  // Theme is forced to light as per user request
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
   const handleLogout = () => {
@@ -53,15 +47,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Sidebar */}
         <aside className={cn(
           "bg-white border-r border-slate-100 transition-all duration-300 flex flex-col z-30",
-          isSidebarOpen ? "w-64" : "w-20"
+          "w-64"
         )}>
           <div className="px-6 h-16 flex items-center border-b border-slate-100">
-            <div className="flex items-center gap-3">
+            <a
+              href="/dashboard"
+              className="flex items-center gap-3 rounded-xl text-left"
+              aria-label="Go to dashboard"
+            >
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-blue-600/20">
                 <Zap className="w-5 h-5 fill-current" />
               </div>
               <span className="font-black text-xl tracking-tighter text-slate-900">Lumina</span>
-            </div>
+            </a>
           </div>
           
           <nav className="flex-1 p-4 space-y-1">
@@ -73,17 +71,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               const Icon = item.icon;
               
               return (
-                <Link key={item.name} href={item.href}>
-                  <div className={cn(
-                    "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all group",
+                <a
+                  key={item.name}
+                  href={item.href}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={cn(
+                    "flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-all group",
                     isActive 
-                      ? "bg-blue-600/10 text-blue-600 font-bold" 
+                      ? "bg-blue-600/10 text-blue-600 shadow-sm shadow-blue-600/5" 
                       : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                  )}
+                >
+                  <span className={cn(
+                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors",
+                    isActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"
                   )}>
-                    <Icon className={cn("w-4.5 h-4.5", isActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600")} />
-                    <span className="text-sm">{item.name}</span>
-                  </div>
-                </Link>
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <span className={cn("text-sm font-medium", isActive && "font-black")}>{item.name}</span>
+                </a>
               );
             })}
           </nav>

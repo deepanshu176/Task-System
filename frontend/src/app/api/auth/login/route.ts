@@ -4,9 +4,11 @@ import { connectDB } from '@/lib/mongodb';
 import { loginSchema } from '@/lib/validation';
 import { generateToken } from '@/lib/jwt-server';
 import { ZodError } from 'zod';
+import { findLocalUserByCredentials, isDatabaseUnavailable, publicUser } from '@/lib/local-auth-store';
 
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes
+const allowLocalFallback = process.env.DATABASE_MODE !== 'mongodb';
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,7 +18,35 @@ export async function POST(request: NextRequest) {
     const validatedData = loginSchema.parse(body);
     const { email, password } = validatedData;
     
-    const db = await connectDB();
+    let db;
+    try {
+      db = await connectDB();
+    } catch (error) {
+      if (!allowLocalFallback || !isDatabaseUnavailable(error)) {
+        throw error;
+      }
+
+      const localUser = await findLocalUserByCredentials(email, password);
+      if (!localUser) {
+        return NextResponse.json(
+          { success: false, message: 'Invalid email or password' },
+          { status: 401 }
+        );
+      }
+
+      const token = generateToken({ userId: localUser._id }, '7d');
+      return NextResponse.json(
+        {
+          success: true,
+          message: 'Login successful',
+          data: {
+            token,
+            user: publicUser(localUser)
+          }
+        },
+        { status: 200 }
+      );
+    }
 
     // Find user
     const user = await db.collection('users').findOne({ email });
@@ -108,13 +138,11 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    if (error instanceof Error) {
-      if (error.name === 'MongoServerSelectionError' || error.name === 'MongoNetworkError') {
-        return NextResponse.json(
-          { success: false, message: 'Database unreachable. Please check your Atlas IP whitelist.' }, 
-          { status: 503 }
-        );
-      }
+    if (isDatabaseUnavailable(error)) {
+      return NextResponse.json(
+        { success: false, message: 'Database unreachable. Please check your Atlas IP whitelist.' },
+        { status: 503 }
+      );
     }
     return NextResponse.json(
       { success: false, message: 'Internal server error' },

@@ -13,6 +13,20 @@ export async function GET(request: NextRequest) {
     const isAdmin = user.role === 'ADMIN';
     const cacheKey = `dashboard_stats:${user._id}`;
 
+    if (typeof user._id === 'string' && user._id.startsWith('local-')) {
+      return NextResponse.json({
+        success: true,
+        data: {
+          totalProjects: 0,
+          totalTasks: 0,
+          pendingTasks: 0,
+          completedTasks: 0,
+          activeProjects: 0,
+          lastUpdated: new Date()
+        }
+      });
+    }
+
     const stats = await getCachedData(cacheKey, async () => {
       const db = await connectDB();
       const userId = user._id;
