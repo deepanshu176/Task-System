@@ -62,13 +62,17 @@ export default function AnalyticsPage() {
 
   const { data: projectsData } = useSWR<Project[]>("/projects", fetcher, {
     fallbackData: [],
-    revalidateOnFocus: false,
+    revalidateOnFocus: true,
+    refreshInterval: 5000,
+    dedupingInterval: 2000,
   });
 
   const taskUrl = selectedProjectId === "all" ? "/tasks" : `/tasks?projectId=${selectedProjectId}`;
   const { data: tasksData } = useSWR<Task[]>(taskUrl, fetcher, {
     fallbackData: [],
-    revalidateOnFocus: false,
+    revalidateOnFocus: true,
+    refreshInterval: 5000,
+    dedupingInterval: 2000,
   });
 
   const projects = useMemo(() => Array.isArray(projectsData) ? projectsData : [], [projectsData]);

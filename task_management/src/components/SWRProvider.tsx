@@ -6,9 +6,7 @@ import api from "@/lib/api";
 /**
  * GLOBAL SWR CLIENT PROVIDER
  * 
- * Optimized for performance:
- * 1. 10s deduping interval to prevent redundant DB queries.
- * 2. Disabled focus/reconnect revalidation to lower MongoDB connection count.
+ * Optimized for responsive dashboard updates.
  * 3. Unified fetcher using the centralized axios instance.
  */
 export const SWRProvider = ({ children }: { children: React.ReactNode }) => {
@@ -16,9 +14,9 @@ export const SWRProvider = ({ children }: { children: React.ReactNode }) => {
     <SWRConfig 
       value={{
         fetcher: (url: string) => api.get(url).then(res => res.data),
-        dedupingInterval: 10000,
-        revalidateOnFocus: false,
-        revalidateOnReconnect: false
+        dedupingInterval: 2000,
+        revalidateOnFocus: true,
+        revalidateOnReconnect: true
       }}
     >
       {children}

@@ -17,6 +17,7 @@ type AuthenticatedUser = {
 };
 
 const localUserCache = new Map<string, { data: AuthenticatedUser, expiry: number }>();
+const inFlightUserLookups = new Map<string, Promise<AuthenticatedUser | null>>();
 const CACHE_TTL = 300000; // 5 minutes
 const allowLocalFallback = process.env.DATABASE_MODE !== 'mongodb';
 
@@ -59,7 +60,8 @@ export async function authenticateRequest(request: NextRequest) {
   }
 
   try {
-    const user = await getCachedData(`user_session:${userId}`, async () => {
+    const cachedLookup = inFlightUserLookups.get(userId);
+    const user = cachedLookup || getCachedData(`user_session:${userId}`, async () => {
       const db = await connectDB();
       const users = await db.collection('users').aggregate([
         { $match: { _id: new ObjectId(userId) } },
@@ -84,14 +86,21 @@ export async function authenticateRequest(request: NextRequest) {
       return (users[0] as AuthenticatedUser | undefined) || null;
     }, 600); // Cache user for 10 minutes in Redis
 
-    if (!user) {
+    if (!cachedLookup) {
+      inFlightUserLookups.set(userId, user);
+    }
+
+    const resolvedUser = await user;
+    inFlightUserLookups.delete(userId);
+
+    if (!resolvedUser) {
       return { user: null, error: 'User account not found', status: 401 };
     }
 
     // Update local cache
-    localUserCache.set(userId, { data: user, expiry: Date.now() + CACHE_TTL });
+    localUserCache.set(userId, { data: resolvedUser, expiry: Date.now() + CACHE_TTL });
 
-    return { user, error: null, status: 200 };
+    return { user: resolvedUser, error: null, status: 200 };
   } catch (error) {
     if (allowLocalFallback && isDatabaseUnavailable(error)) {
       const localUser = await findLocalUserById(userId);

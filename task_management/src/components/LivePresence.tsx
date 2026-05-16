@@ -19,9 +19,11 @@ const getPresenceUserId = (user: PresenceUser) => user._id || user.id || null;
 
 export default function LivePresence() {
   const { user } = useAuthStore();
-  const { data: usersData } = useSWR(user?.role === 'ADMIN' ? '/users?limit=20' : null, fetcher, {
+  const { data: usersData } = useSWR(user?.role === 'ADMIN' ? '/users?limit=100' : null, fetcher, {
     fallbackData: [],
-    revalidateOnFocus: false,
+    revalidateOnFocus: true,
+    refreshInterval: 5000,
+    dedupingInterval: 2000,
   });
   const allUsers: PresenceUser[] = Array.isArray(usersData) ? usersData : usersData?.data || [];
   const users = allUsers.filter((presenceUser) => presenceUser.roleName !== 'ADMIN');
@@ -55,7 +57,7 @@ export default function LivePresence() {
         }
         return prev;
       });
-    }, 8000);
+    }, 3000);
 
     return () => clearInterval(interval);
   }, [users]);
@@ -65,7 +67,7 @@ export default function LivePresence() {
   if (users.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-6 px-6 py-2 bg-white border border-slate-100 rounded-2xl shadow-sm">
+    <div className="flex items-center gap-6 px-6 py-2 bg-white border border-slate-100 rounded-2xl shadow-sm dark:bg-slate-900 dark:border-slate-800 dark:shadow-none">
       <div className="flex items-center gap-2">
         <div className="relative">
           <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping absolute inset-0" />
@@ -88,12 +90,12 @@ export default function LivePresence() {
             onMouseEnter={() => setHoveredUser(userId)}
             onMouseLeave={() => setHoveredUser(null)}
           >
-            <div className="w-8 h-8 rounded-full border-2 border-white bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-[10px] font-black text-white shadow-md cursor-help transition-transform hover:scale-110">
+            <div className="w-8 h-8 rounded-full border-2 border-white bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-[10px] font-black text-white shadow-md cursor-help transition-transform hover:scale-110 dark:border-slate-900">
               {user.name?.charAt(0).toUpperCase()}
             </div>
             
             {/* Presence Pulse */}
-            <div className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+            <div className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white shadow-[0_0_8px_rgba(16,185,129,0.5)] dark:border-slate-900" />
             
             {/* Premium Tooltip */}
             <AnimatePresence>
@@ -113,16 +115,16 @@ export default function LivePresence() {
         )})}
         
         {users.length > activeIds.length && (
-           <div className="w-8 h-8 rounded-full border-2 border-white bg-slate-50 flex items-center justify-center text-[9px] font-black text-slate-400">
+           <div className="w-8 h-8 rounded-full border-2 border-white bg-slate-50 flex items-center justify-center text-[9px] font-black text-slate-400 dark:border-slate-900 dark:bg-slate-800 dark:text-slate-300">
               +{users.length - activeIds.length}
            </div>
         )}
       </div>
 
-      <div className="h-4 w-px bg-slate-100" />
+      <div className="h-4 w-px bg-slate-100 dark:bg-slate-800" />
 
-      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">
-        <span className="text-slate-900">{users.length}</span> Members Active
+      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+        <span className="text-slate-900 dark:text-white">{users.length}</span> Members Active
       </p>
     </div>
   );

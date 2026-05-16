@@ -28,7 +28,7 @@ Password: Admin@123
 ## Project Structure
 
 ```text
-frontend/
+task_management/
   src/app/                 Next.js app routes and API routes
   src/app/api/             Backend API endpoints
   src/app/dashboard/       Dashboard, projects, tasks, team, analytics pages
@@ -42,11 +42,11 @@ frontend/
 Install dependencies:
 
 ```bash
-cd frontend
+cd task_management
 npm install
 ```
 
-Create `frontend/.env.local`:
+Create `task_management/.env.local`:
 
 ```env
 DATABASE_MODE=mongodb
@@ -67,13 +67,13 @@ NODE_ENV=development
 Local mode stores data in:
 
 ```text
-frontend/.data/local-db.json
+task_management/.data/local-db.json
 ```
 
 ## Run The Project
 
 ```bash
-cd frontend
+cd task_management
 npm run dev
 ```
 

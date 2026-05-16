@@ -10,9 +10,9 @@ const mongoOptions = {
   maxPoolSize: 10,
   minPoolSize: 0,
   maxIdleTimeMS: 30000,
-  connectTimeoutMS: 30000,
-  serverSelectionTimeoutMS: 30000,
-  socketTimeoutMS: 45000,
+  connectTimeoutMS: 8000,
+  serverSelectionTimeoutMS: 8000,
+  socketTimeoutMS: 15000,
   retryWrites: true,
 };
 

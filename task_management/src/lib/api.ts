@@ -4,7 +4,7 @@ import { useAuthStore } from '../store/authStore';
 // Use local API since backend is now integrated
 const api = axios.create({
   baseURL: '/api',
-  timeout: 45000,
+  timeout: 12000,
 });
 
 api.interceptors.request.use((config) => {
